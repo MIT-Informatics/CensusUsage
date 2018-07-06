@@ -61,11 +61,13 @@ def process_string(text):
 
 	tags = nltk.pos_tag(removed)
 	return_text = ''
+	return_list = []
 
 	#removing stop words in strings and lemmatizing
 	for word, tag in tags:
 		return_text += lemmatizer.lemmatize(word, convert_pos(tag)) + " "
-	return return_text
+		return_list.append(lemmatizer.lemmatize(word, convert_pos(tag)))
+	return return_text, return_list
 
 
 if __name__ == '__main__':
