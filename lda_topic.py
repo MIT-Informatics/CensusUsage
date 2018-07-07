@@ -1,9 +1,3 @@
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.decomposition import LatentDirichletAllocation
-from sklearn.datasets import fetch_20newsgroups
-
-from sklearn.metrics import log_loss
-
 import gensim
 from gensim import corpora
 from gensim.models import ldamodel, CoherenceModel
@@ -12,56 +6,12 @@ import numpy as np
 from twitter_act import *
 from process import *
 
-
-
-#setting paramteres for training
 #number of top features that appear in corpus to be considered
 number_features = 1000
 #number of topics to print eventually
 number_topics = 5
 #n-gram size to consider
 n_size = 2
-
-def print_topics(model, feature_names, n_top_words):
-    
-    '''
-    Method to print the 'top' most important words of the features
-    @param model - a trained model to evaluate the features
-    @param feature_names - features of the document to evaluate
-    @param n_top_words - the number of top words to print
-    '''
-
-    for topic_idx, topic in enumerate(model.components_):
-        message = "Topic #%d: " % topic_idx
-        message += " ".join([feature_names[i]
-                             for i in topic.argsort()[:-n_top_words - 1:-1]])
-        print(message)
-
-def sk_topic_analysis(text_list):
-    '''
-    Method to model the topics of an input text list using sklearn
-    @param text_list - a list of strings to analyze and produce the topics
-    @return - the lda model produced
-    '''
-
-    #df determines which words to ignore with a document frequency between 2 and 0.95
-    tf_vectorizer = CountVectorizer(max_df=0.95, min_df=2,
-                                max_features=number_features,
-                                stop_words='english')
-    
-    tf = tf_vectorizer.fit_transform(text_list)
-
-	#creating lda model
-    lda = LatentDirichletAllocation(n_components=number_topics, max_iter=5,
-                                learning_method='online',
-                                random_state=0)
-	#fitting model to Bag Of Words vector
-    lda.fit(tf)
-
-    tf_feature_names = tf_vectorizer.get_feature_names()
-
-    print_topics(lda, tf_feature_names, n_size)
-    return lda
 
 def gensim_topic_analysis(text_list):
 
@@ -88,18 +38,8 @@ def gensim_topic_analysis(text_list):
                                           per_word_topics=True)
 
     print(lda.print_topics())
+
     return lda, corpus, id_word, text_list
-
-def loglikelihood(true, model):
-    
-    '''
-    Method to calculate the loglikelihood and evaluate goodness of topic model
-    @param labels - the accepted values of the data
-    @param preds - the values calculated by the model
-    '''
-
-    norm_prediction = model.components_ / model.components_.sum(axis=1)[:,np.newaxis]
-    return log_loss(true, norm_prediction)
 
 def evaluate_gensim_lda(lda_model, corpus, id_word, text_list):
 
@@ -132,13 +72,13 @@ if __name__ == "__main__":
     # topic_analysis(tweets_text)
     words = [u'Hi what is your name.', u"Ever need to add some random or meaningless text into Microsoft Word to test a document, temporarily fill some space, or to see how some formatting looks? Luckily, Word provides a couple of quick and easy methods for entering random text into your document.", u"To do this, position the cursor at the beginning of a blank paragraph. Type the following and press Enter. It does not matter if you use lowercase, uppercase, or mixed case.", u"I'm a student and research assistant at Brown University, who is studying the fields of Computer Science and Applied Math. I am currently working in the Rubenstein Lab within the DARPA Molecular Informatics Project and as an intern in the MIT Program of Information Science. I am particularly interested in the ability to perceive information from data sets through analytical methods. I love research, data science, and machine learning. I am always looking for opportunities to learn new skills.", u"At school, I am on the organizing team of the Brown Data Science club and the Fintech at Brown, a member of the Brown Club Tennis Team, and a writer for the Ursa Sapiens Blog. In my free time, I love to play soccer and the viola."]
 
-    word_list = []
     sentence_list = []
-    for item in words:
-        sentence_list.append(process_string(item)[0])
-        word_list.append(process_string(item)[1])
-    sklearn_model = sk_topic_analysis(sentence_list)
-    gensim_model, corpus, id_word, text_list = gensim_topic_analysis(word_list)
-    evaluate_gensim_lda(gensim_model, corpus, id_word, text_list)
 
-    # print(loglikelihood(['Brown University', 'data science', 'computer science', 'MIT internship', 'DARPA Moleculear', 'research assistant', 'brown club'], model))
+    #formatting words to be analyzed for both sklearn and gensim
+    for item in words:
+        word_list.append(process_string(item)[1])
+    
+    #fitting gensim model
+    gensim_model, corpus, id_word, text_list = gensim_topic_analysis(word_list)
+    #evaluating perplexity and coherence of gensim lda model
+    evaluate_gensim_lda(gensim_model, corpus, id_word, text_list)
