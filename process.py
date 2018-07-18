@@ -2,19 +2,44 @@ import nltk
 from nltk.tokenize import sent_tokenize, word_tokenize, PunktSentenceTokenizer
 from nltk.corpus import stopwords, wordnet
 from nltk.stem import PorterStemmer, WordNetLemmatizer
+from collections import defaultdict
+
+from gensim.models.phrases import Phrases, Phraser
 
 import string
 import regex as re
 
+from webscraping import *
+
 
 #retrieving stopwords to remove from data analysis
 stop_words = set(stopwords.words("english"))
-stop_words.add('rt') #adding retweet to stopwords
+
+stop_words.add('rt') #adding retweet to stopwords for Twitter API
+
+#adding to stop words for newspaper
+stop_words.add("footnotes")
+stop_words.add("advertisement")
+stop_words.add("ET")
+stop_words.add("PM")
+stop_words.add("AM")
+stop_words.add("really")
+stop_words.add("also")
+stop_words.add("said")
+stop_words.add("saying")
+stop_words.add("say")
+stop_words.add("jerry")
+stop_words.add("baker")
+stop_words.add("chronicle")
+stop_words.add("would")
+stop_words.add("story")
+stop_words.add("here")
+
 
 #creating stemmer to stem through tweets
 ps = PorterStemmer()
 
-#creating lemmatizer to choose synonyms of words to normalize
+#creating lemmatizer to sdafads synonyms of words to normalize
 lemmatizer = WordNetLemmatizer()
 
 def convert_pos(pos_tag):
@@ -37,7 +62,7 @@ def convert_pos(pos_tag):
 		#as default for lemmatizer
 	    return wordnet.NOUN
 
-def remove_punctuation(text):
+def clean_text(text):
     
     '''
     Method to remove the punctuation from a unicode text input
@@ -45,7 +70,21 @@ def remove_punctuation(text):
     @return - the same input with all punctuation removed
     '''
 
-    return re.sub(ur"\p{P}+", "", text)
+    #removing any non ascii characters that cannot be read
+    text = text.lower().encode("ascii", "ignore")
+
+    text = text.replace("  ", " ")
+
+	#removing other special characters    
+    text = re.sub(r'[-|\n|\t|\']','',text)
+
+    #removing punctuation
+    text = re.sub(r'[^\w\s]','',text)
+    	
+    #removing numbers
+    text = re.sub(r'[0-9]','',text)
+
+    return text
 
 def process_string(text):
 
@@ -56,8 +95,12 @@ def process_string(text):
 	'''
 
 	#tokenizing string into words and POS tagging and removing all punctuation
-	words = word_tokenize(remove_punctuation(text))
-	removed = list(filter(lambda x: x not in stop_words, words))
+	words = word_tokenize(clean_text(text))
+
+	phrases = Phrases(words, min_count=3, threshold=1)
+	bigram = Phraser(phrases)
+
+	removed = list(filter(lambda x: x not in stop_words, bigram[words]))
 
 	tags = nltk.pos_tag(removed)
 	return_text = ''
@@ -71,4 +114,7 @@ def process_string(text):
 
 
 if __name__ == '__main__':
-	print(process_string("Hi what is your name? I'm so hungry, I want to eat some food."))
+	corpus = webscrape()
+
+	for doc in corpus:
+		print(process_string(doc))
