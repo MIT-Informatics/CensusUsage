@@ -3,12 +3,17 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium import webdriver
-from selenium.common.exceptions import TimeoutException
+from selenium.common.exceptions import TimeoutException, WebDriverException
+
+from httplib import BadStatusLine
 
 #utilizing beautifulsoup
 from bs4 import BeautifulSoup
+import requests
+from requests.exceptions import MissingSchema
 
 from process import *
+import socket
 
 #for uzing regexp
 import re
@@ -38,33 +43,97 @@ def search_url(url):
 	'''
 
 	#try catch block to check for errors in accessing web
+	# driver = webdriver.Chrome("/home/dsam99/Downloads/chromedriver")
+
+	error_urls = []
+	corpus = []
+
 	try:
 		#creating webdriver through Chrome
-		driver = webdriver.Chrome("/home/dsam99/Downloads/chromedriver")
+		# driver.get(url)
+		# page = driver.page_source
 
-		driver.get(url)
-		page = driver.page_source
-		soup = BeautifulSoup(page, 'html.parser')
-		return soup.findAll('p')
+		#using request module to access html
+		if url.startswith("https://", 0):
+			result = requests.get(url)
 
-		# #trying access hidden record_main div tag with javascript
-		# record_main = driver.find_element_by_xpath("//div[@class='controllers-contents']")
+			print("Accessed webpage")
 
-		# driver.execute_script("arguments[0].click();",record_main)
+			#checking if valid request
+			if result.status_code == 200:
 
-		# driver.execute_script("arguments[0].setAttribute('style','visibility:visible;');",record_main)
+				print("Extracted html information")
 
-		# time.sleep(5) # seconds
+				soup = BeautifulSoup(result.content, 'html.parser')
+				links = soup.findAll('a')
+				# return links
 
-		# # Wait for the dynamically loaded elements to show up
-		# WebDriverWait(driver, 400)
+				pages = []
+
+				#getting links for other pages
+				for link in links:
+					if link.text == "View Clip":
+						pages.append(link.attrs['href'])
+
+				print("Extracted all links")
+
+				#searching up other pages
+				for page in pages:
+					try:
+						# driver.get(page)
+						#checking if all schema is present
+						if page.startswith("https://", 0) or page.startswith("http://", 0):
+							inner_page = requests.get(page)
+
+							#checking if valid request
+							if inner_page.status_code == 200:		
+								page_text = BeautifulSoup(inner_page.content, 'html.parser')
+								for p in page_text.findAll('p'):
+									corpus.append(p)
+							else:
+								error_urls.append(page)
+						else:
+							error_urls.append(page)
+
+					except socket.error:
+						print("Error with connecting sockets")
+						error_urls.append(page)
+
+					except BadStatusLine(line):
+						print("Error in status response")
+						error_urls.append(page)
+
+					except MissingSchema(error):
+						print("Missing Schema Error")
+						error_urls.append(page)
+
+					except WebDriverException:
+						print("Error in web driver")
+					except TimeoutException():
+						print("Page did not load in given time")
+
+
+				print("Finished page")
+				
+		else:
+			error_urls.append(url)
 
 	#except block to catch TimeoutException
 	except TimeoutException():
 		print("Page did not load in given time")
+	except socket.error:
+		print("Error with connecting sockets")
+	except BadStatusLine(line):
+		print("Error in status response")
+	except WebDriverException:
+		print("Error in web driver")
+
 	#finally block to close web driver
 	finally:	
-		driver.quit()
+		# driver.quit()
+		print("reached finally block")
+		return corpus, error_urls
+
 
 def webscrape():
 
@@ -73,15 +142,20 @@ def webscrape():
 	'''
 	
 	corpus = []
+	error_links = []
 
 	#looping through urls to look up through webdriver
-	for url in url_list[:5]: 
+	for url in url_list[0:1]: 
 		#pulling information <p> tags from each webpage
-		raw_data = search_url(url)
-		for i in raw_data:
-			corpus.append(i.text)
-
-	return corpus
+		raw_data, errors = search_url(url)
+		#appending all text information
+		if raw_data != None:
+			for i in raw_data:
+				corpus.append(i.text)
+		#appending all error links
+		for error in errors:
+			error_links.append(error)
+	return corpus, error_links
 
 if __name__ == "__main__":
-	print(webscrape())
+	print(webscrape()[0])
