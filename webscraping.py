@@ -10,7 +10,7 @@ from httplib import BadStatusLine
 #utilizing beautifulsoup
 from bs4 import BeautifulSoup
 import requests
-from requests.exceptions import MissingSchema
+from requests.exceptions import MissingSchema, ConnectionError
 
 from process import *
 import socket
@@ -134,6 +134,45 @@ def search_url(url):
 		print("reached finally block")
 		return corpus, error_urls
 
+def errors_search():
+
+	'''
+	Method to handle the error_urls from the webscrape method
+	@param error_urls - a list containing the errant urls from the webscrape method 
+	@return - a quintuple containing: list of 200 responses,list of 403 errors, list of 404 errors, list of 410 errors, and a list of errors caught by try catches
+	'''
+
+	with open('error_urls.txt', 'rb') as f:
+		error_urls = f.readlines()
+
+	#filtering out newline characters
+	error_urls = [i.replace('\n', '') for i in error_urls]
+
+	list_200 = []
+	list_403 = []
+	list_404 = []
+	list_410 = []
+	other_list = []
+
+	for url in error_urls:
+		try:
+			result = requests.get(url)
+			if result.status_code == 200:
+				list_200.append(url)
+			elif result.status_code == 403:
+				list_403.append(url)
+			elif result.status_code == 404:
+				list_404.append(url)
+			elif result.status_code == 410:
+				list_410.append(url)
+			else:
+				other_list.append(url)
+		except ConnectionError as e:
+			print(str(e) + " ConnectionError")
+			other_list.append(url)
+
+	return list_200, list_403, list_404, list_410, other_list
+
 
 def webscrape():
 
@@ -141,11 +180,12 @@ def webscrape():
 	Method to automate the webscraping of a webpage
 	'''
 	
+	#a list of text lists containing word from the documents
 	corpus = []
 	error_links = []
 
 	#looping through urls to look up through webdriver
-	for url in url_list[0:1]: 
+	for url in url_list: 
 		#pulling information <p> tags from each webpage
 		raw_data, errors = search_url(url)
 		#appending all text information
