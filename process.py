@@ -4,7 +4,9 @@ from nltk.corpus import stopwords, wordnet
 from nltk.stem import PorterStemmer, WordNetLemmatizer
 from collections import defaultdict
 
+from gensim.test.utils import datapath
 from gensim.models.phrases import Phrases, Phraser
+from gensim.models.word2vec import Text8Corpus
 
 import string
 import regex as re
@@ -34,6 +36,7 @@ stop_words.add("chronicle")
 stop_words.add("would")
 stop_words.add("story")
 stop_words.add("here")
+stop_words.add("I")
 
 
 #creating stemmer to stem through tweets
@@ -41,6 +44,11 @@ ps = PorterStemmer()
 
 #creating lemmatizer to sdafads synonyms of words to normalize
 lemmatizer = WordNetLemmatizer()
+
+#training bigram model on gensim corpus
+sentences = Text8Corpus(datapath('testcorpus.txt'))
+phrases = Phrases(sentences, min_count=1, threshold=1)  	
+bigram = Phraser(phrases)
 
 def convert_pos(pos_tag):
 	
@@ -71,7 +79,7 @@ def clean_text(text):
     '''
 
     #removing any non ascii characters that cannot be read
-    text = text.lower().encode("ascii", "ignore")
+    text = text.encode("ascii", "ignore")
 
     text = text.replace("  ", " ")
 
@@ -96,11 +104,10 @@ def process_string(text):
 
 	#tokenizing string into words and POS tagging and removing all punctuation
 	words = word_tokenize(clean_text(text))
+	words = filter(lambda x: x != "", words)
 
-	phrases = Phrases(words, min_count=3, threshold=1)
-	bigram = Phraser(phrases)
-
-	removed = list(filter(lambda x: x not in stop_words, bigram[words]))
+	# applying model to words from corpus
+	removed = list(filter(lambda x: x.lower() not in stop_words, bigram[words]))
 
 	tags = nltk.pos_tag(removed)
 	return_text = ''
