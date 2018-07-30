@@ -78,24 +78,67 @@ def show_pyldavis(model, corpus, dictionary):
     prepared_data = pyLDAvis.gensim.prepare(model, corpus, dictionary)
     pyLDAvis.show(prepared_data)
 
-#when running script
-if __name__ == "__main__":
-    #using twitter_act file to access Twitter API
-    t = main()
-    #searching for tweets with #ACS hashtag
-    # tweets_objects = t.searchHashtag('#ACS')
+def apply_model(model, document, dictionary):
 
-    # tweets_text = []
+    '''
+    Method to apply the trained lda model to a subset document
+    @param model - the model to apply on the document
+    @param document - the document in the form of a list of words to apply the model on
+    @return - the probability vector that is represents the probability that the document falls within each topic of the model
+    '''
 
-    # adding only text into tweet_text list
-    # for item in tweets_objects:
-    #     tweets_text.append(process_string(item['text']))
+    doc = dictionary.doc2bow(document)
 
-    # topic_analysis(tweets_text)
+    #creating the probability vector of the document in the model
+    vector = model[doc][0]
+    return vector
 
+def split_documents(model, id_word, text_list):
+
+    '''
+    Method to split documents by the topic that they fall in
+    @param model - the trained lda topic model
+    @param all_docmuents - the total documents that the model was trained on
+    @return a dictionary from topic number to the corresponding list of documents that are most likely to fall in the topic
+    '''
+
+    topic_dict = {i: [] for i in range(9)}
+    
+    for doc in text_list:
+        vector = apply_model(model, doc, id_word)
+
+        #finding the max probability tuple based on second element
+        max_prob = max(vector,key=lambda x:x[1])
+
+        topic_dict[max_prob[0]].append(doc)
+
+    return topic_dict
+
+def run_webscraping():
+
+    '''
+    Method to automate the running of the webscraping and pickling of the files
+    '''
+
+    webscraping_data, error_links, result_dict, html_corpus = webscrape()
+
+    # Storing files for later use
+    pickle.dump(webscraping_data, open("webscraping_data.p", "wb"))
+
+    with open('error_urls.txt', 'wb') as f:
+        for error in error_links:
+            f.write(error + '\n')
+
+    pickle.dump(result_dict, open("result_dictionary.p", "wb"))
+    pickle.dump(html_corpus, open("html_corpus.p", "wb"))
+
+def train_model():
+
+    '''
+    Method to automate training of the lda model on the corpus data
+    '''
+    
     webscraping_data = pickle.load(open("webscraping_data.p", "rb"))
-
-    #webscraping_data, error_links, result_dict, html_corpus = webscrape()
 
     word_list = []
 
@@ -103,32 +146,36 @@ if __name__ == "__main__":
     for item in webscraping_data:
         word_list.append(process_string(item)[1])
 
-
-    
-    # # Storing files for later use
-    # pickle.dump(webscraping_data, open("webscraping_data.p", "wb"))
-
-    # with open('error_urls.txt', 'wb') as f:
-    #     for error in error_links:
-    #         f.write(error + '\n')
-
-    # pickle.dump(result_dict, open("result_dictionary.p", "wb"))
-    # pickle.dump(html_corpus, open("html_corpus.p", "wb"))
-
+    #filtering out empty strings
     word_list = filter(lambda x: len(x) != 0, word_list)
 
+    #creating bigrams to run model on
     bigram_model = create_bigram_model(word_list)
-
     bigram_word_list = list(bigram_model[word_list])
 
-    # #fitting gensim model
+    #fitting gensim model
     gensim_model, corpus, id_word, text_list = gensim_topic_analysis(bigram_word_list)
+
+    #storing model
+    pickle.dump((gensim_model, corpus, id_word, text_list), open("model_result_bigrams_count5_threshold2.p", "wb"))
     
-    # storing model
-    pickle.dump((gensim_model, corpus, id_word, text_list), open("model_result_bigrams.p", "wb"))
+def evaluate_model():
 
-    # #evaluating perplexity and coherence of gensim lda model
-    # evaluate_gensim_lda(gensim_model, corpus, id_word, text_list)
+    '''
+    Method to evaluate the training of the lda model
+    '''
 
-    # #create visualization of pyldavis
-    # show_pyldavis(gensim_model, corpus, id_word)
+    gensim_model, corpus, id_word, text_list = pickle.load(open('model_result_bigrams.p', 'rb'))
+
+    #evaluating perplexity and coherence of gensim lda model
+    evaluate_gensim_lda(gensim_model, corpus, id_word, text_list)
+
+    #create visualization of pyldavis
+    show_pyldavis(gensim_model, corpus, id_word)
+
+#when running script
+if __name__ == "__main__":
+    train_model()
+
+
+
