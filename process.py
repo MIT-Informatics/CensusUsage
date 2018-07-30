@@ -10,7 +10,7 @@ from gensim.models.word2vec import Text8Corpus
 
 import string
 import regex as re
-
+import pickle
 from webscraping import *
 
 
@@ -44,11 +44,6 @@ ps = PorterStemmer()
 
 #creating lemmatizer to sdafads synonyms of words to normalize
 lemmatizer = WordNetLemmatizer()
-
-#training bigram model on gensim corpus
-sentences = Text8Corpus(datapath('testcorpus.txt'))
-phrases = Phrases(sentences, min_count=1, threshold=1)  	
-bigram = Phraser(phrases)
 
 def convert_pos(pos_tag):
 	
@@ -94,6 +89,19 @@ def clean_text(text):
 
     return text
 
+def create_bigram_model(corpus):
+	
+	'''
+	Method to create a bigram model
+	@param corpus - the corpus to train the model on
+	@return - the trained bigram model
+	'''
+
+	bigram = Phrases()
+	for sentence in corpus:
+		bigram.add_vocab([sentence])
+	return bigram
+
 def process_string(text):
 
 	'''
@@ -107,7 +115,7 @@ def process_string(text):
 	words = filter(lambda x: x != "", words)
 
 	# applying model to words from corpus
-	removed = list(filter(lambda x: x.lower() not in stop_words, bigram[words]))
+	removed = list(filter(lambda x: x.lower() not in stop_words, words))
 
 	tags = nltk.pos_tag(removed)
 	return_text = ''
@@ -119,9 +127,17 @@ def process_string(text):
 		return_list.append(lemmatizer.lemmatize(word, convert_pos(tag)))
 	return return_text, return_list
 
-
 if __name__ == '__main__':
-	corpus = webscrape()
+	corpus = pickle.load(open('webscraping_data.p'))
+	word_list = []
+	for doc in corpus[:100]:
+		word_list.append(process_string(doc)[1])
 
-	for doc in corpus:
-		print(process_string(doc))
+	bigram_model = create_bigram_model(word_list)
+	bigram_word_list = list(bigram_model[word_list])
+	print(bigram_word_list)
+
+	for sentence in bigram_word_list:
+		for word in sentence:
+			if "_" in word:
+				print(word)
