@@ -3,6 +3,9 @@
 import gensim
 from gensim import corpora
 from gensim.models import ldamodel, CoherenceModel
+from gensim.models.phrases import Phrases, Phraser
+from gensim.models.word2vec import Text8Corpus, Word2Vec
+
 
 import numpy as np
 from twitter_act import *
@@ -90,24 +93,42 @@ if __name__ == "__main__":
 
     # topic_analysis(tweets_text)
 
-    webscraping_data = pickle.load(open("webscraping_corpus.p", "rb"))
+    webscraping_data = pickle.load(open("webscraping_data.p", "rb"))
 
+    #webscraping_data, error_links, result_dict, html_corpus = webscrape()
 
     word_list = []
 
     #formatting words to be analyzed for both sklearn and gensim
     for item in webscraping_data:
         word_list.append(process_string(item)[1])
+
+
     
+    # # Storing files for later use
+    # pickle.dump(webscraping_data, open("webscraping_data.p", "wb"))
+
+    # with open('error_urls.txt', 'wb') as f:
+    #     for error in error_links:
+    #         f.write(error + '\n')
+
+    # pickle.dump(result_dict, open("result_dictionary.p", "wb"))
+    # pickle.dump(html_corpus, open("html_corpus.p", "wb"))
+
     word_list = filter(lambda x: len(x) != 0, word_list)
 
-    #fitting gensim model
-    gensim_model, corpus, id_word, text_list = gensim_topic_analysis(word_list)
-    #evaluating perplexity and coherence of gensim lda model
+    bigram_model = create_bigram_model(word_list)
 
-    # pickle.dump((gensim_model, corpus, id_word, text_list), open("model_result.p", "wb"))
+    bigram_word_list = list(bigram_model[word_list])
 
-    evaluate_gensim_lda(gensim_model, corpus, id_word, text_list)
+    # #fitting gensim model
+    gensim_model, corpus, id_word, text_list = gensim_topic_analysis(bigram_word_list)
+    
+    # storing model
+    pickle.dump((gensim_model, corpus, id_word, text_list), open("model_result_bigrams.p", "wb"))
 
-    #create visualization of pyldavis
-    show_pyldavis(gensim_model, corpus, id_word)
+    # #evaluating perplexity and coherence of gensim lda model
+    # evaluate_gensim_lda(gensim_model, corpus, id_word, text_list)
+
+    # #create visualization of pyldavis
+    # show_pyldavis(gensim_model, corpus, id_word)
