@@ -1,6 +1,8 @@
 from wordcloud import WordCloud
 import matplotlib.pyplot as plt
 
+from webscraping import *
+
 def create_wordcloud(text):
 	
 	'''
@@ -25,6 +27,12 @@ def show_wordcloud(wc):
 	plt.show()
 
 if __name__ == "__main__":
-	w = create_wordcloud("You have choices about the information on your profile, such as your education, work experience, skills, photo, city or area and endorsements. Some Members may choose to complete a separate ProFinder profile. You dont have to provide additional information on your profile; however, profile information helps you to get more from our Services, including helping recruiters and business opportunities find you. Its your choice whether to include sensitive information on your profile and to make that sensitive information public. Please do not post or add personal data to your profile that you would not want to be publicly available.")
+	corpus = webscrape()
+
+	all_text = ""
+	for i in corpus:
+		all_text += i
+
+	w = create_wordcloud(all_text)
 
 	show_wordcloud(w)

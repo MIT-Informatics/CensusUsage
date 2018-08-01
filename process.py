@@ -16,6 +16,7 @@ from webscraping import *
 
 #retrieving stopwords to remove from data analysis
 stop_words = set(stopwords.words("english"))
+bigram_filter_list = []
 
 stop_words.add('rt') #adding retweet to stopwords for Twitter API
 
@@ -38,6 +39,22 @@ stop_words.add("story")
 stop_words.add("here")
 stop_words.add("I")
 
+#from news articles bigram analysis
+stop_words.add("inline")
+stop_words.add("div")
+stop_words.add("cta")
+stop_words.add("bin")
+stop_words.add("url")
+stop_words.add("jQuery")
+stop_words.add("css")
+stop_words.add("module")
+stop_words.add("is")
+stop_words.add("sailthru")
+stop_words.add("btn")
+stop_words.add("bg")
+stop_words.add("href")
+stop_words.add("magazine")
+stop_words.add("font")
 
 #creating stemmer to stem through tweets
 ps = PorterStemmer()
@@ -97,9 +114,8 @@ def create_bigram_model(corpus):
 	@return - the trained bigram model
 	'''
 
-	bigram = Phrases()
-	for sentence in corpus:
-		bigram.add_vocab([sentence])
+	phrases = Phrases(corpus, min_count=400, threshold=100)
+	bigram = Phraser(phrases)
 	return bigram
 
 def process_string(text):
@@ -128,16 +144,21 @@ def process_string(text):
 	return return_text, return_list
 
 if __name__ == '__main__':
-	corpus = pickle.load(open('webscraping_data.p'))
+	corpus = pickle.load(open('source_files/webscraping_data.p'))
 	word_list = []
-	for doc in corpus[:100]:
+	for doc in corpus:
 		word_list.append(process_string(doc)[1])
 
 	bigram_model = create_bigram_model(word_list)
 	bigram_word_list = list(bigram_model[word_list])
 	print(bigram_word_list)
 
+	count =  0
+
 	for sentence in bigram_word_list:
 		for word in sentence:
 			if "_" in word:
 				print(word)
+				count += 1
+
+	print(count)

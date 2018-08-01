@@ -21,7 +21,7 @@ import time
 
 url_list = []
 #opening url txt file and parsing
-with open('NewsUrls.txt') as f:
+with open('source_files/NewsUrls.txt') as f:
 
 	#reading first line from file
 	line = f.readline()
@@ -47,14 +47,14 @@ def search_url(url):
 
 	error_urls = []
 	corpus = []
+	html_corpus = []
+
+	#tuple list showing the result for each linked url and the corresponding links
+	results = []
 
 	try:
-		#creating webdriver through Chrome
-		# driver.get(url)
-		# page = driver.page_source
-
 		#using request module to access html
-		if url.startswith("https://", 0):
+		if url.startswith("https://", 0) or url.startswith("http://", 0):
 			result = requests.get(url)
 
 			print("Accessed webpage")
@@ -75,48 +75,62 @@ def search_url(url):
 					if link.text == "View Clip":
 						pages.append(link.attrs['href'])
 
-				print("Extracted all links")
+				print("Extracted all " + str(len(links)) + " links")
 
 				#searching up other pages
 				for page in pages:
 					try:
-						# driver.get(page)
 						#checking if all schema is present
 						if page.startswith("https://", 0) or page.startswith("http://", 0):
+
 							inner_page = requests.get(page)
 
 							#checking if valid request
-							if inner_page.status_code == 200:		
+							if inner_page.status_code == 200:	
+								
+								print("Valid page")
 								page_text = BeautifulSoup(inner_page.content, 'html.parser')
+
+								#results and html code for whole page
+								results.append((page, 200))
+								html_corpus.append(page_text)
+
+								#iterating through each page to find p tags for text
 								for p in page_text.findAll('p'):
 									corpus.append(p)
 							else:
+								print("Invalid linked URL")
 								error_urls.append(page)
+								results.append((page, inner_page.status_code))
+								html_corpus.append(None)
 						else:
+							print("Invalid linked URL, does not start with correct Schema")
 							error_urls.append(page)
+							results.append((page, None))
+							html_corpus.append(None)
+
 
 					except socket.error:
 						print("Error with connecting sockets")
 						error_urls.append(page)
-
+						results.append((page, None))
 					except BadStatusLine(line):
 						print("Error in status response")
 						error_urls.append(page)
-
+						results.append((page, None))
 					except MissingSchema(error):
 						print("Missing Schema Error")
+						results.append((page, None))
 						error_urls.append(page)
-
 					except WebDriverException:
 						print("Error in web driver")
 					except TimeoutException():
 						print("Page did not load in given time")
-
-
 				print("Finished page")
-				
 		else:
+			print("Invalid URI")
 			error_urls.append(url)
+			results.append(None)
 
 	#except block to catch TimeoutException
 	except TimeoutException():
@@ -130,49 +144,8 @@ def search_url(url):
 
 	#finally block to close web driver
 	finally:	
-		# driver.quit()
 		print("reached finally block")
-		return corpus, error_urls
-
-def errors_search():
-
-	'''
-	Method to handle the error_urls from the webscrape method
-	@param error_urls - a list containing the errant urls from the webscrape method 
-	@return - a quintuple containing: list of 200 responses,list of 403 errors, list of 404 errors, list of 410 errors, and a list of errors caught by try catches
-	'''
-
-	with open('error_urls.txt', 'rb') as f:
-		error_urls = f.readlines()
-
-	#filtering out newline characters
-	error_urls = [i.replace('\n', '') for i in error_urls]
-
-	list_200 = []
-	list_403 = []
-	list_404 = []
-	list_410 = []
-	other_list = []
-
-	for url in error_urls:
-		try:
-			result = requests.get(url)
-			if result.status_code == 200:
-				list_200.append(url)
-			elif result.status_code == 403:
-				list_403.append(url)
-			elif result.status_code == 404:
-				list_404.append(url)
-			elif result.status_code == 410:
-				list_410.append(url)
-			else:
-				other_list.append(url)
-		except ConnectionError as e:
-			print(str(e) + " ConnectionError")
-			other_list.append(url)
-
-	return list_200, list_403, list_404, list_410, other_list
-
+		return corpus, error_urls, results, html_corpus
 
 def webscrape():
 
@@ -183,11 +156,13 @@ def webscrape():
 	#a list of text lists containing word from the documents
 	corpus = []
 	error_links = []
-
+	result_dict = {}
+	html_corpus = []
+	
 	#looping through urls to look up through webdriver
 	for url in url_list: 
 		#pulling information <p> tags from each webpage
-		raw_data, errors = search_url(url)
+		raw_data, errors, results, htmls = search_url(url)
 		#appending all text information
 		if raw_data != None:
 			for i in raw_data:
@@ -195,7 +170,11 @@ def webscrape():
 		#appending all error links
 		for error in errors:
 			error_links.append(error)
-	return corpus, error_links
+		
+		result_dict[url] = results
+		html_corpus.append(htmls)
+
+	return corpus, error_links, result_dict, html_corpus
 
 if __name__ == "__main__":
 	print(webscrape()[0])
