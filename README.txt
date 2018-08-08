@@ -15,3 +15,19 @@ The searchHashtag function simply queries the string parameter to the twitter AP
 OAuth.txt
 ----------
 A text file that you must update to contain consumer access tokens and secrets.
+
+lda_topic.py
+------------
+A python script that contains information about running LDA topic modelling analysis on an input text corpus. The script utilizes the Gensim LDA package.
+
+webscraping.py
+--------------
+A python script that webscrapes the information from multiple News sources from an input URI text file.
+
+jstor.py 
+--------
+A python script for dealing with n-gram datasets from the JSTOR database.
+
+error_analysis.py
+-----------------
+A python script for analyzing the results of webscraping. It takes in a list of URLs that had an error in parsing or have a poor status code.
