@@ -11,16 +11,14 @@ from gensim.models.word2vec import Text8Corpus
 import string
 import regex as re
 import pickle
-from webscraping import *
 
-
-#retrieving stopwords to remove from data analysis
+# retrieving stopwords to remove from data analysis
 stop_words = set(stopwords.words("english"))
 bigram_filter_list = []
 
-stop_words.add('rt') #adding retweet to stopwords for Twitter API
+stop_words.add('rt')  # adding retweet to stopwords for Twitter API
 
-#adding to stop words for newspaper
+# adding to stop words for newspaper
 stop_words.add("footnotes")
 stop_words.add("advertisement")
 stop_words.add("ET")
@@ -39,7 +37,7 @@ stop_words.add("story")
 stop_words.add("here")
 stop_words.add("I")
 
-#from news articles bigram analysis
+# from news articles bigram analysis
 stop_words.add("inline")
 stop_words.add("div")
 stop_words.add("cta")
@@ -56,109 +54,137 @@ stop_words.add("href")
 stop_words.add("magazine")
 stop_words.add("font")
 
-#creating stemmer to stem through tweets
+# creating stemmer to stem through tweets
 ps = PorterStemmer()
 
-#creating lemmatizer to sdafads synonyms of words to normalize
+# creating lemmatizer to sdafads synonyms of words to normalize
 lemmatizer = WordNetLemmatizer()
 
-def convert_pos(pos_tag):
-	
-	'''
-	Method to convert the pos_tag into a wordnet tag to use in lemmatizer
-	@param pos_tag - a POS_tag from the nltk
-	@return - the wordnet version of the POS tag
-	'''
 
-	if pos_tag.startswith('J'):
-	    return wordnet.ADJ
-	elif pos_tag.startswith('V'):
-	    return wordnet.VERB
-	elif pos_tag.startswith('N'):
-	    return wordnet.NOUN
-	elif pos_tag.startswith('R'):
-	    return wordnet.ADV
-	else:
-		#as default for lemmatizer
-	    return wordnet.NOUN
+def convert_pos(pos_tag):
+    '''
+    Method to convert the pos_tag into a wordnet tag to use in lemmatizer
+    @param pos_tag - a POS_tag from the nltk
+    @return - the wordnet version of the POS tag
+    '''
+
+    if pos_tag.startswith('J'):
+        return wordnet.ADJ
+    elif pos_tag.startswith('V'):
+        return wordnet.VERB
+    elif pos_tag.startswith('N'):
+        return wordnet.NOUN
+    elif pos_tag.startswith('R'):
+        return wordnet.ADV
+    else:
+            # as default for lemmatizer
+        return wordnet.NOUN
+
 
 def clean_text(text):
-    
     '''
     Method to remove the punctuation from a unicode text input
     @param text - the text input
     @return - the same input with all punctuation removed
     '''
 
-    #removing any non ascii characters that cannot be read
-    text = text.encode("ascii", "ignore")
+    # removing any non ascii characters that cannot be read
+    # text = text.encode("ascii", "ignore")
 
     text = text.replace("  ", " ")
 
-	#removing other special characters    
-    text = re.sub(r'[-|\n|\t|\']','',text)
+    # removing other special characters
+    text = re.sub(r'[-|\n|\t|\']', '', text)
 
-    #removing punctuation
-    text = re.sub(r'[^\w\s]','',text)
-    	
-    #removing numbers
-    text = re.sub(r'[0-9]','',text)
+    # removing punctuation
+    text = re.sub(r'[^\w\s]', '', text)
+
+    # removing numbers
+    text = re.sub(r'[0-9]', '', text)
+
+    # encoding as a string
+    text = text.encode('ascii', 'ignore')
 
     return text
 
-def create_bigram_model(corpus):
-	
-	'''
-	Method to create a bigram model
-	@param corpus - the corpus to train the model on
-	@return - the trained bigram model
-	'''
 
-	phrases = Phrases(corpus, min_count=400, threshold=100)
-	bigram = Phraser(phrases)
-	return bigram
+def create_bigram_model(corpus):
+    '''
+    Method to create a bigram model
+    @param corpus - the corpus to train the model on
+    @return - the trained bigram model
+    '''
+
+    phrases = Phrases(corpus, min_count=400, threshold=200)
+    bigram = Phraser(phrases)
+    return bigram
+
 
 def process_string(text):
+    '''
+    Method to do preprocessing of an input text
+    @param text - raw text to process
+    @return - the processed version of the text
+    '''
 
-	'''
-	Method to do preprocessing of an input text
-	@param text - raw text to process
-	@return - the processed version of the text
-	'''
+    # tokenizing string into words and POS tagging and removing all punctuation
+    words = word_tokenize(clean_text(text))
+    words = filter(lambda x: x != "", words)
 
-	#tokenizing string into words and POS tagging and removing all punctuation
-	words = word_tokenize(clean_text(text))
-	words = filter(lambda x: x != "", words)
+    # applying model to words from corpus
+    removed = list(filter(lambda x: x.lower() not in stop_words, words))
 
-	# applying model to words from corpus
-	removed = list(filter(lambda x: x.lower() not in stop_words, words))
+    tags = nltk.pos_tag(removed)
+    return_text = ''
+    return_list = []
 
-	tags = nltk.pos_tag(removed)
-	return_text = ''
-	return_list = []
+    # removing stop words in strings and lemmatizing
+    for word, tag in tags:
+        return_text += lemmatizer.lemmatize(word, convert_pos(tag)) + " "
+        return_list.append(lemmatizer.lemmatize(word, convert_pos(tag)))
+    return return_text, return_list
 
-	#removing stop words in strings and lemmatizing
-	for word, tag in tags:
-		return_text += lemmatizer.lemmatize(word, convert_pos(tag)) + " "
-		return_list.append(lemmatizer.lemmatize(word, convert_pos(tag)))
-	return return_text, return_list
+
+def process_bow(bow_doc):
+    '''
+    Method to do preprocessing of an input bag of words
+    @param bow - a bag of words format input of strings
+    @return - return text, return list
+    '''
+
+    # processing the bow documents
+    words = [clean_text(i) for i in bow_doc]
+    words = filter(lambda x: x != "", words)
+
+    # applying model to words from corpus
+    removed = list(filter(lambda x: x.lower() not in stop_words, words))
+
+    tags = nltk.pos_tag(removed)
+    return_text = ''
+    return_list = []
+
+    # removing stop words in strings and lemmatizing
+    for word, tag in tags:
+        return_text += lemmatizer.lemmatize(word, convert_pos(tag)) + " "
+        return_list.append(lemmatizer.lemmatize(word, convert_pos(tag)))
+    return return_text, return_list
 
 if __name__ == '__main__':
-	corpus = pickle.load(open('source_files/webscraping_data.p'))
-	word_list = []
-	for doc in corpus:
-		word_list.append(process_string(doc)[1])
+    corpus = pickle.load(open('source_files/webscraping_data.p'))
+    word_list = []
+    for doc in corpus:
+        word_list.append(process_string(doc)[1])
 
-	bigram_model = create_bigram_model(word_list)
-	bigram_word_list = list(bigram_model[word_list])
-	print(bigram_word_list)
+    bigram_model = create_bigram_model(word_list)
+    bigram_word_list = list(bigram_model[word_list])
+    print(bigram_word_list)
 
-	count =  0
+    count = 0
 
-	for sentence in bigram_word_list:
-		for word in sentence:
-			if "_" in word:
-				print(word)
-				count += 1
+    for sentence in bigram_word_list:
+        for word in sentence:
+            if "_" in word:
+                print(word)
+                count += 1
 
-	print(count)
+    print(count)

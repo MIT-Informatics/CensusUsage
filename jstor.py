@@ -1,8 +1,12 @@
+# encoding: utf-8
+
 import numpy as np
 import pickle
 from gensim.corpora import Dictionary
 import os
 import glob
+from process import *
+from string import digits
 
 
 def ngram_to_doc(filepath):
@@ -19,7 +23,7 @@ def ngram_to_doc(filepath):
     document = []
 
     # opening and reading file
-    with open(filepath, "rb") as f:
+    with open(filepath, "r") as f:
         # reading first line of file
         line = f.readline()
 
@@ -32,8 +36,11 @@ def ngram_to_doc(filepath):
 
     # adding words to document
     for tup in n_gram_data:
-        for i in range(int(tup[1])):
-            document.append(tup[0])
+        word = tup[0].translate(digits)
+        # word = word.decode("ascii", errors="ignore").encode('ascii')
+        if not word in stop_words and len(word) > 2:
+            for i in range(int(tup[1])):
+                document.append(tup[0])
 
     return document
 
@@ -55,7 +62,25 @@ def create_text_list(filepath_list):
 
     return text_list
 
+
+def run_jstor():
+    '''
+    Method to run the topic model on JSTOR datasets
+    '''
+
+    all_files = glob.glob("source_files/american_community_survey_ngram/*")
+    text_list = create_text_list(all_files)
+
+    cleaned_text = []
+    for i in text_list:
+        cleaned_text.append(process_bow(i)[0])
+
+    return cleaned_text
+
 # an example path from the jstor database
 example_path = "source_files/american_census_data_ngram/journal-article-10.5406_ethnomusicology.55.2.0200-ngram1.txt"
 
-all_files = glob.glob("source_files/american_census_data_ngram/*")
+all_files = glob.glob("source_files/american_community_survey_ngram/*")
+
+if __name__ == "__main__":
+    print(create_text_list(all_files))

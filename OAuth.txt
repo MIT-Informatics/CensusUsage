@@ -1,4 +1,4 @@
-your-consumer-key
-your-consumer-secret
-your-access-token
-your-access-secret 
+oSkY9K1SuiX5PaDtchhi2Zwyy
+aYZ3k5qu0Ye5co5U0uGOxW6ogPu2NTR1hBotFwdWt06lsiQUHS
+921531290674958336-ZMCP6hfbv03W8A959NInCaqoH0sGNDg
+DsSrifltqhzT1VsAS3Eo4djGQ8K8M4SqluNv5EY2JqaTE
