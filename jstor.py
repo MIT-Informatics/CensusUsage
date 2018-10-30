@@ -63,7 +63,7 @@ def create_text_list(filepath_list):
     return text_list
 
 
-def run_jstor():
+def create_jstor_corpus():
     '''
     Method to run the topic model on JSTOR datasets
     '''
@@ -77,10 +77,23 @@ def run_jstor():
 
     return cleaned_text
 
+def read_metadata():
+    '''
+    Method to read categorize articles based on metadata information
+
+    '''
+
+    # TODO : solve issues with finding ways of categorizing metadata
+
+
+    return
+
 # an example path from the jstor database
 example_path = "source_files/american_census_data_ngram/journal-article-10.5406_ethnomusicology.55.2.0200-ngram1.txt"
 
+# getting all files within respective data or metadata directories 
 all_files = glob.glob("source_files/american_community_survey_ngram/*")
+all_metadata = glob.glob("source_files/american_community_survey_metadata/*")
 
 if __name__ == "__main__":
-    print(create_text_list(all_files))
+    corpus = create_jstor_corpus(all_files)

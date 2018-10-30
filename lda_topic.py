@@ -1,31 +1,60 @@
 # coding=utf-8
+import sys
+import pickle
+import numpy as np
 
+# packages to help with NLP
 import gensim
 from gensim import corpora
 from gensim.models import ldamodel, CoherenceModel
 from gensim.models.phrases import Phrases, Phraser
 from gensim.models.word2vec import Text8Corpus, Word2Vec
+from gensim.corpora import dictionary
+import pyLDAvis.gensim
 
-import numpy as np
+#importing data storage/extraction files
+from tweets import *
 from webscraping import *
 from jstor import *
 
-import pickle
-
-# using pyLDAvis to visualize
-import pyLDAvis.gensim
-
 # to help with pickling html files from BeautifulSoup
-import sys
 sys.setrecursionlimit(40000)
 
 # number of topics to print eventually
-number_topics = 9
+number_topics = 5
+
+
+def change_priors(word, topic_number, id2word, eta, weight):
+    '''
+    Method to change the value of a weight inside of an eta priors list
+
+    Keyword args:
+    word - the word to change the value of
+    topic_number - the topic which to scale the probability by
+    id2word - the id2word dictionary object
+    eta - the list of topic to word probability values
+    weight - the amount to scale the value of word by
+
+    :Return:
+    the updated version of eta
+
+    '''
+
+    # looking up id of word in dictionary
+    
+    for i in id2word.keys():
+        if word == id2word[i]:
+            word_id = id2word.token2id[word]
+            # multiplying the value of the current prob in eta
+            eta[topic_number][word_id] *= weight
+            print(word + " found in word vectors")
+
+    return eta
 
 
 def create_priors(id2word):
     '''
-    Method to create the eta matrix that will be used in the lda model as a prior
+    Method to create the eta matrix that will be used in the lda model as a prior based from topic/word probability
     @param id2word - the id to word lookup dictionary
     @returns - the eta matrix
     '''
@@ -33,24 +62,24 @@ def create_priors(id2word):
     eta = []
 
     # initializing each topic with values for each word
-    for topic in range(num_topics):
-        eta = numpy.ones((2, len(dictionary))) * 0.5
+    for topic in range(number_topics):
+        eta.append(np.ones(len(id2word)) * 0.1)
         # aggressively seed the word 'system', in one of the
         # two topics, 10 times higher than the other words
 
     # values for seed words in each topic
-    model = dictionary.token2id[u'model']
-    statistics = dictionary.token2id[u'statistics']
-    academic = dictionary.token2id[u'academic']
-    commercial = dictionary.token2id[u'commercial']
-    graph = dictionary.token2id[u'graph']
+    seed_words = [
+        (u'model', 0), (u'statistics', 0), (u'graph', 0),
+        (u'academic', 1), (u'academia', 1), (u'research', 1),
+        (u'commercial', 2), (u'industry', 2), (u'town', 2),
+        (u'people', 3), (u'place', 3),
+    ]
 
-    # scaling seed word values
-    eta[0, model] *= 10
-    eta[1, statistics] *= 10
-    eta[2, academic] *= 10
-    eta[3, commercial] *= 10
-    eta[4, graph] *= 10
+    # iterating through seed words and scaling eta
+    for (word, topic_num) in seed_words:
+        eta = change_priors(word, topic_num, id2word, eta, 5)
+
+    eta = change_priors('people', 3, id2word, eta, 1.5)
 
     return eta
 
@@ -71,9 +100,11 @@ def gensim_topic_analysis(text_list, seeding=False):
     # checking if seeding parameter is passed -> default to false
     if seeding:
         eta = None
+        per_word_topics = True
     else:
         print("Using seeded model")
         eta = create_priors(id_word)
+        per_word_topics = False
 
     # creating LDA model with parameterized topics and training passes
     # params - dictionary, number topics to print, seed to create random
@@ -88,7 +119,7 @@ def gensim_topic_analysis(text_list, seeding=False):
                                           passes=5,
                                           alpha='auto',
                                           eta=eta,
-                                          per_word_topics=True)
+                                          per_word_topics=per_word_topics)
 
     print(lda.print_topics())
     return lda, corpus, id_word, text_list
@@ -172,7 +203,7 @@ def train_model(corpus_data):
         corpus_data, seeding=True)
 
     print("finished training model")
- 
+
     # storing model
     # pickle.dump((gensim_model, corpus, id_word, text_list),
     # open("source_files/model_result_2.p", "wb"))
@@ -193,10 +224,12 @@ def evaluate_model():
     show_pyldavis(gensim_model, corpus, id_word)
 
 
-# when running script
 if __name__ == "__main__":
+
     x = process_web_data('source_files/webscraping_data_2.p')
     gensim_model, corpus, id_word, text_list = gensim_topic_analysis(
-        x, seeding=True)
-
+        x[:10], seeding=True)
     show_pyldavis(gensim_model, corpus, id_word)
+
+
+    # print(create_priors(id_word))

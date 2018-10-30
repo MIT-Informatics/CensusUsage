@@ -1,23 +1,19 @@
-from selenium import webdriver
-from selenium.common.exceptions import TimeoutException, WebDriverException
+import re
+import time
+import socket
+import sys
 
+# packages to help with extracting web data
 from httplib import BadStatusLine
-
-# utilizing beautifulsoup
 from bs4 import BeautifulSoup
 import requests
 from lxml import html
 from requests.exceptions import MissingSchema, ConnectionError
 
-import socket
+# importing file to help processing data
 from process import *
 
-# for uzing regexp
-import re
-import time
-
 # to help with pickling html files from BeautifulSoup
-import sys
 sys.setrecursionlimit(40000)
 
 
@@ -180,9 +176,133 @@ def search_url(url):
         return corpus, error_urls, results, html_corpus
 
 
+def store_webscraping(webscraping_data, error_links, result_dict, html_corpus):
+    '''
+    Method to store the result of webscraping
+
+    Keyword Args:
+    webscraping_data - the text data from webscraping
+    error_links - a list containing URLs that threw errors
+    result_dict - a dictionary containing URI -> URL -> http response
+    html_corpus - a list of html files
+
+    :Return:
+    None
+
+    '''
+
+    # Storing files for later use
+    pickle.dump(webscraping_data, open(
+        "source_files/webscraping_data_2.p", "wb"))
+
+    with open('source_files/error_urls_2.txt', 'wb') as f:
+        for error in error_links:
+            f.write(error + '\n')
+
+    pickle.dump(result_dict, open("source_files/result_dictionary_2.p", "wb"))
+    pickle.dump(html_corpus, open("source_files/html_corpus_2.p", "wb"))
+
+
+def process_web_data(webscraping_data):
+    '''
+    Method to process the text data from webscraping
+
+    Keyword Args:
+    webscraping_data - the text data from webscraping
+
+    :Return:
+    bigram_word_list - the cleaned text data with the bigram model applied
+    '''
+
+    text_list = []
+
+    # formatting words to be analyzed for both sklearn and gensim
+    for uri in webscraping_data:
+        # processing each document data
+        for doc in uri:
+            for p in doc:
+                text_list.append(process_string(p)[1])
+
+    print("processed html text")
+
+    # filtering out empty strings
+    text_list = filter(lambda x: len(x) != 0, text_list)
+
+    # creating bigrams to run model on
+    bigram_model = create_bigram_model(text_list)
+    bigram_word_list = list(bigram_model[text_list])
+
+    return bigram_word_list
+
+
+def extract_web_data(filepath):
+    '''
+    Method to extract information from the pickled web text data strings
+
+    Keyword Args:
+    filepath - the string filepath to the web text data
+
+    :Return:
+    bigram_word_list - the cleaned text data with the bigram model applied
+    '''
+
+    web_data = pickle.load(open(filepath, 'rb'))
+    bigram_word_list = process_web_data(web_data)
+
+    return bigram_word_list
+
+
+def extract_html(filepath):
+    '''
+    Method to extract information from the pickled html strings
+
+    Keyword Args:
+    filepath - the string filepath to the pickled html files
+
+    :Return:
+    bigram_word_list - the cleaned text data with the bigram model applied
+
+    '''
+
+    # opening pickled html_corpus
+    html_corpus = pickle.load(open(filepath, 'rb'))
+    corpus = []
+
+    # extracting information by iterating through uri stored info
+    for uri in html_corpus:
+        # doc = []
+        # extracting info from each url in the uris
+        for html_doc in uri:
+            # creating doc to hold text
+            if html_doc != None:
+                for p in html_doc.findAll('p'):
+                    corpus.append(process_string(p.text)[1])
+
+    print("processed html text")
+
+    # filtering out empty strings
+    word_list = filter(lambda x: len(x) != 0, corpus)
+
+    # creating bigrams to run model on
+    bigram_model = create_bigram_model(word_list)
+    bigram_word_list = list(bigram_model[word_list])
+
+    return bigram_word_list
+
+
 def webscrape(url_list):
     '''
-    Method to automate the webscraping of a webpage
+    Method to extract the information from webscraping the list of URIs
+
+    Keyword Args:
+    url_list - the list of URIs that links to URLs
+
+    :Return:
+    webscraping_data - the text data from webscraping
+    error_links - a list containing URLs that threw errors
+    result_dict - a dictionary containing URI -> URL -> http response
+    html_corpus - a list of html files
+
     '''
 
     # a list of text lists containing word from the documents
@@ -209,95 +329,11 @@ def webscrape(url_list):
         result_dict[url] = results
         html_corpus.append(htmls)
 
-    return corpus, error_links, result_dict, html_corpus
-
-
-def store_webscraping():
-    '''
-    Method to automate the running of the webscraping and pickling of the files
-    '''
-
-    webscraping_data, error_links, result_dict, html_corpus = webscrape(
-        url_list_2)
-
-    # Storing files for later use
-    pickle.dump(webscraping_data, open(
-        "source_files/webscraping_data_2.p", "wb"))
-
-    with open('source_files/error_urls_2.txt', 'wb') as f:
-        for error in error_links:
-            f.write(error + '\n')
-
-    pickle.dump(result_dict, open("source_files/result_dictionary_2.p", "wb"))
-    pickle.dump(html_corpus, open("source_files/html_corpus_2.p", "wb"))
-
-
-def process_web_data(filepath):
-    '''
-    Method to process web data that has been pickled
-    '''
-
-    webscraping_data = pickle.load(
-        open(filepath, "rb"))
-
-    print("opened pickle")
-    text_list = []
-
-    # formatting words to be analyzed for both sklearn and gensim
-    for uri in webscraping_data:
-        # processing each document data
-        for doc in uri:
-            for p in doc:
-                text_list.append(process_string(p)[1])
-
-            # text_list.append(word_list)
-
-    print("processed html text")
-
-    # filtering out empty strings
-    text_list = filter(lambda x: len(x) != 0, text_list)
-
-    # creating bigrams to run model on
-    bigram_model = create_bigram_model(text_list)
-    bigram_word_list = list(bigram_model[text_list])
+    store_webscraping(corpus, error_links, result_dict, html_corpus)
+    bigram_word_list = process_web_data(corpus)
 
     return bigram_word_list
-
-
-def extract_html(filepath):
-    '''
-    Method to extract information from the pickled html strings
-    @param filepath - the path to the pickled html object list
-    '''
-
-    # opening pickled html_corpus
-    html_corpus = pickle.load(open(filepath, 'rb'))
-    corpus = []
-
-    # extracting information by iterating through uri stored info
-    for uri in html_corpus:
-        # doc = []
-        # extracting info from each url in the uris
-        for html_doc in uri:
-            # creating doc to hold text
-            if html_doc != None:
-                for p in html_doc.findAll('p'):
-                    corpus.append(process_string(p.text)[1])
-
-        # corpus.append(doc)
-
-    print("processed html text")
-
-    # filtering out empty strings
-    word_list = filter(lambda x: len(x) != 0, corpus)
-
-    # creating bigrams to run model on
-    bigram_model = create_bigram_model(word_list)
-    bigram_word_list = list(bigram_model[word_list])
-
-    return bigram_word_list
-
-    # return corpus
 
 if __name__ == "__main__":
-    store_webscraping()
+    corpus = extract_web_data("./source_files/webscraping_data.p")
+    print(corpus)
