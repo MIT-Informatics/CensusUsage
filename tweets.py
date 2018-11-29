@@ -1,6 +1,7 @@
 import pickle
 import re
 import time
+import json
 
 # importing file to help parsing text data
 from process import *
@@ -62,24 +63,39 @@ def filter_tweets(tweet_list):
     filtered_list - the filtered list of tweets
     """
 
-    filtered_list = []
+    filtered_data = {}
 
+    count = 0
     for tweet in tweet_list:
         # checking for match
         match = check_tweet(tweet)
         if match != None:
-            data = (tweet.id, tweet.username, tweet.text.encode('utf-8'))
-            filtered_list.append(data)
+            # creating JSON structure to store data of tweet
+            data = {
+                "ID": tweet.id,
+                "username": tweet.username,
+                "text": tweet.text.encode('utf-8'),
+                "date": str(tweet.date),
+                "retweets": tweet.retweets,
+                "favorites": tweet.favorites,
+                "mentions": tweet.mentions,
+                "hashtags": tweet.hashtags,
+                "geo": tweet.geo
+            }
 
-    return filtered_list
+            filtered_data[count] = data
+            count += 1
+
+    return filtered_data
 
 
-def store_data(list_of_text, filename):
+def store_data(tweets_data, filename):
     """
     Method to store extracted information as pickle files
 
     Keyword Args:
-    list_of_text - a list of tweets texts from historical twitter data
+    tweets_data - a JSON object of historical twitter data
+    filename - the name of the file
 
     :Return:
     None
@@ -87,15 +103,13 @@ def store_data(list_of_text, filename):
 
     # writing text to file with newline in between
     with open("source_files/twitter/" + filename, "w") as f:
-        for data in list_of_text:
-            f.write(data[0] + "," + data[1] + "\n")
-            f.write(data[2] + "\n")
+        json.dump(tweets_data, f)
 
-    print(str(len(list_of_text)) + " tweets written to file")
-    pass
+    print("JSON object written to file")
+    return
 
 
-def clean_tweets(text_list):
+def clean_tweets(json_data):
     """
     Method to clean an input of full tweet texts
 
@@ -106,7 +120,7 @@ def clean_tweets(text_list):
     cleaned - a list of tokenized and cleaned text in bow format
     """
 
-    cleaned = [process_string(text[2])[1] for text in text_list]
+    cleaned = [process_string(json_data[key]["text"])[1] for key in json_data]
     return cleaned
 
 
@@ -182,12 +196,12 @@ def main():
     corpus1, corpus2, corpus3, corpus4, corpus5, corpus6 = create_tweet_corpuses()
 
     # storing text of the data
-    store_data(corpus1, "american_community_survey.txt")
-    store_data(corpus2, "#acssurvey.txt")
-    store_data(corpus3, "Americancommunitysurvey.txt")
-    store_data(corpus4, "#ACS_survey.txt")
-    store_data(corpus5, "ACS_survey.txt")
-    store_data(corpus6, "_ACS_survey.txt")
+    # store_data(corpus1, "american_community_survey.json")
+    # store_data(corpus2, "#acssurvey.json")
+    # store_data(corpus3, "Americancommunitysurvey.json")
+    # store_data(corpus4, "#ACS_survey.json")
+    # store_data(corpus5, "ACS_survey.json")
+    # store_data(corpus6, "_ACS_survey.json")
 
     cleaned_corpuses = []
 
