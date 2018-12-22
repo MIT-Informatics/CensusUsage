@@ -46,18 +46,13 @@ def plot_freq_hist(corpus, title):
 	None
 	'''
 
-	# flattening corpus
-	words = [word for doc in corpus for word in doc]
-	# creating counter of total words
-	counts = Counter(words)
+	labels = []
+	values = []
 
-	# extracting values from counter and sorting
-	labels, values = zip(*counts.items())
-	indSort = np.argsort(values)[::-1]
-
-	# rearranging data data
-	labels = np.array(labels)[indSort]
-	values = np.array(values)[indSort]
+	# creating labels and values for labels
+	for i in corpus:
+		labels.append(i[0])
+		values.append(i[1])
 
 	# taking first 40 of each
 	labels = labels[:40]
@@ -94,31 +89,34 @@ def plot_freq_hist(corpus, title):
 
 	plt.show()
 
-
-
-
 def main():
 	'''
 	Script to visualize the jstor data based on split keywords
 	'''
 
 	# creating titles dictionary
-	titles = read_journal_titles(all_metadata)
+	# titles = read_journal_titles(all_metadata)
 
 	# splitting dictionary into list of tuples
-	titles_with, titles_without = split_journal_titles(titles, split_words)
+	# titles_with, titles_without = split_journal_titles(titles, split_words)
 
 	# creating text corpuses
-	t_w, t_wout, bow_w, bow_wout = create_split_corpuses(titles_with, 
-														 titles_without)
-
+	# t_w, t_wout, bow_w, bow_wout = create_split_corpuses(titles_with, 
+														 # titles_without)
 	# plotting word clouds
 	# plot_wc(t_w, "JSTOR Data containing word set")
 	# plot_wc(t_wout, "JSTOR Data not containing word set")
 
+	# creating frequency distributions
+	freq_with, freq_without = calculate_different_frequencies(all_metadata, split_words)
+
+	# sorting frequency distributions
+	sorted_with = sorted(freq_with.items(), key=lambda x: x[1], reverse=True)
+	sorted_without = sorted(freq_without.items(), key=lambda x: x[1], reverse=True)
+
 	# plotting frequency histograms
-	# plot_freq_hist(bow_w, "Frequencies of JSTOR Data containing word set")
-	plot_freq_hist(bow_wout, 
+	plot_freq_hist(sorted_with, "Frequencies of JSTOR Data containing word set")
+	plot_freq_hist(sorted_without, 
 				   "Frequencies of JSTOR Data not containing word set")
 
 

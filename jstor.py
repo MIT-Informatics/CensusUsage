@@ -34,14 +34,17 @@ def ngram_to_doc(filepath):
 		while line:
 			tuple_data = line.split("\t")
 			# creating triple of word, count, id
-			n_gram_data.append(
-				(tuple_data[0], tuple_data[1].replace('\n', '')))
+			n_gram_data.append((tuple_data[0], tuple_data[1].replace('\n', '')))
 			line = f.readline()
 
 	# adding words to document
 	for tup in n_gram_data:
 		word = tup[0].translate(digits)
-		# word = word.decode("ascii", errors="ignore").encode('ascii')
+
+		#removing punctuation and numbers
+		word = clean_text(word)
+
+		# adding word to document the number of times as the unigram count
 		if not word in stop_words and len(word) > 2:
 			for i in range(int(tup[1])):
 				document.append(tup[0])
@@ -95,9 +98,13 @@ def read_journal_titles(directory):
 
 	titles = {}
 	count = 0
+
+	# counts for weird title names
+	fm_count = 0
+	bm_count = 0
 	total_files = len(directory)
 
-	pattern = r"<journal-title>.*</journal-title>|<book-title>.*</book-title>|<journal-title content-type=\"full\">.*</journal-title>|<article-title>.*</article-title>"
+	pattern = r"<article-title>.*</article-title>|<book-title>.*</book-title>"
 
 	for filepath in directory:
 
@@ -113,14 +120,27 @@ def read_journal_titles(directory):
 		if len(match) == 0:
 			print("No titles in metadata")
 		else:
-			cleaned = match[0].replace("<journal-title>", "")
-			cleaned = cleaned.replace("</journal-title>", "")
+			cleaned = match[0].replace("<article-title>", "")
+			cleaned = cleaned.replace("</article-title>", "")
 			cleaned = cleaned.replace("<book-title>", "")
 			cleaned = cleaned.replace("</book-title>", "")
-			titles[cleaned] = filepath
+
+			# finding articles with front matter or back matter names
+			if cleaned == "Front Matter":
+				fm_count += 1
+			elif cleaned == "Back Matter":
+				bm_count += 1
+			else:
+				if cleaned in titles:
+					print(cleaned)
+				else:
+					titles[cleaned] = filepath
 
 		count += 1
 
+	print(len(titles))
+	print("Back Matter count: " + str(bm_count))
+	print("Front Matter count: " + str(fm_count))
 	return titles
 
 
@@ -166,7 +186,8 @@ def split_journal_titles(titles, words):
 	words - the set of words to split on 
 
 	Return:
-	two lists, the first is all the titles that contain any word in words and the second list containing all other titles
+	two lists, the first is all the titles that contain any word in words and the 
+	second list containing all other titles
 	'''
 
 	titles_with = []
@@ -186,7 +207,8 @@ def split_journal_titles(titles, words):
 
 def calculate_word_frequencies(tuples_list):
 	'''
-	Method to calculate the different in word frequency of documents that are split by containing specific keywords
+	Method to calculate the different in word frequency of documents that are 
+	split by containing specific keywords
 
 	Keyword Args:
 	tuples_list - a list of tuples of (titles, filepath) to the ngram file
@@ -196,21 +218,24 @@ def calculate_word_frequencies(tuples_list):
 	and the number of articles
 	'''
 
-	word2freq = {}
+	doc2freq = {}
 
 	# looping through files
 	for title, file in tuples_list:
 		document = ngram_to_doc(file)
 		words = list(map(lambda x: x.lower(), document))
 
+		# removing any duplicates from list
+		words = set(words)
+
 		# incrementing counts in dictionary
 		for word in words:
-			if word in word2freq:
-				word2freq[word] += 1
+			if word in doc2freq:
+				doc2freq[word] += 1
 			else:
-				word2freq[word] = 1
+				doc2freq[word] = 1
 
-	return word2freq, len(tuples_list)
+	return doc2freq, len(tuples_list)
 
 def create_split_corpuses(words_with, words_without):
 	'''
@@ -302,9 +327,9 @@ split_words = [
 	"machine learning",
 	"artificial intelligence",
 	"statistics",
-	"graphs"
+	"graphs",
+	"monte carlo"
 ]
-
 
 if __name__ == "__main__":
 
@@ -318,18 +343,17 @@ if __name__ == "__main__":
 	for word in sorted_a[:40]:
 		word = word[0]
 		if word in b:
-			print(word, a[word], b[word])
+			print(word, "A: " + str(a[word]) + " | B: " + str(b[word]))
 		else:
-			print(word, a[word], 0)
-
+			print(word, "A: " + str(a[word]) + " | B: 0")
 
 	print("Top 20 words in b")
 	for word in sorted_b[:40]:
 		word = word[0]
-		if word in a:
-			print(word, a[word], b[word])
+		if word in b:
+			print(word, "A: " + str(a[word]) + " | B: " + str(b[word]))
 		else:
-			print(word, 0, b[word])
+			print(word, "A: 0" + " | B: " + str(b[word]))
 
 
 
