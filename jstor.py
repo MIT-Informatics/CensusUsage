@@ -212,6 +212,47 @@ def calculate_word_frequencies(tuples_list):
 
 	return word2freq, len(tuples_list)
 
+def create_split_corpuses(words_with, words_without):
+	'''
+	Method to create corpuses from dictionaries of (title->filepath) dictionaries
+
+	Keyword Args:
+	words_with - a dictionary of (title->filepath) that has titles that contain the words
+	words_without - a dictionary of (title->filepath) that has titles that doesn't contain the words
+
+	Returns: 
+	two strings that contain all the words with and words without
+	'''
+
+	links_w = list(map(lambda x: x[1], words_with))
+	links_wout =  list(map(lambda x: x[1], words_without))
+
+	texts_w = create_text_list(links_w)
+	texts_wout = create_text_list(links_wout)
+
+	string_w = flatten_string_list(texts_w)
+	string_wout = flatten_string_list(texts_wout)
+
+	return string_w, string_wout, texts_w, texts_wout 
+
+
+def flatten_string_list(bow):
+	'''
+	Method to flatten a string list by adding and placing a space in between
+
+	Keyword Args:
+	bow - a list of strings that represent each document strings
+
+	Returns:
+	a string containing all the strings concattenated together
+	'''
+	acc = ""
+	for string_list in bow:
+		for s in string_list:
+			acc += s + " "
+	return acc
+
+
 def calculate_different_frequencies(directory, words_list):
 	'''
 	Method to calculate the different in word frequency of documents that are split by containing specific keywords
@@ -254,17 +295,18 @@ all_ngrams = glob.glob("source_files/jstor/american_community_survey_ngram/*")
 all_metadata = glob.glob(
 	"source_files/jstor/american_community_survey_metadata/*")
 
-if __name__ == "__main__":
+# placeholder list of words to split on
+split_words = [
+	"analysis",
+	"regression",
+	"machine learning",
+	"artificial intelligence",
+	"statistics",
+	"graphs"
+]
 
-	# placeholder list of words to split on
-	split_words = [
-		"analysis",
-		"regression",
-		"machine learning",
-		"artificial intelligence",
-		"statistics",
-		"graphs"
-	]
+
+if __name__ == "__main__":
 
 	# creating titles dictinoary
 	a, b = calculate_different_frequencies(all_metadata, split_words)
@@ -273,7 +315,7 @@ if __name__ == "__main__":
 	sorted_b = sorted(b.items(), key=lambda x: x[1], reverse=True)
 
 	print("Top 20 words in a")
-	for word in sorted_a[:20]:
+	for word in sorted_a[:40]:
 		word = word[0]
 		if word in b:
 			print(word, a[word], b[word])
@@ -282,7 +324,7 @@ if __name__ == "__main__":
 
 
 	print("Top 20 words in b")
-	for word in sorted_b[:20]:
+	for word in sorted_b[:40]:
 		word = word[0]
 		if word in a:
 			print(word, a[word], b[word])
