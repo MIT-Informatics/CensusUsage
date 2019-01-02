@@ -12,7 +12,7 @@ from gensim.models.word2vec import Text8Corpus, Word2Vec
 from gensim.corpora import dictionary
 import pyLDAvis.gensim
 
-#importing data storage/extraction files
+# importing data storage/extraction files
 from tweets import *
 from webscraping import *
 from jstor import *
@@ -41,7 +41,7 @@ def change_priors(word, topic_number, id2word, eta, weight):
     '''
 
     # looking up id of word in dictionary
-    
+
     for i in id2word.keys():
         if word == id2word[i]:
             word_id = id2word.token2id[word]
@@ -68,6 +68,8 @@ def create_priors(id2word):
         # two topics, 10 times higher than the other words
 
     # values for seed words in each topic
+
+    # example seed
     seed_words = [
         (u'model', 0), (u'statistics', 0), (u'graph', 0),
         (u'academic', 1), (u'academia', 1), (u'research', 1),
@@ -75,11 +77,28 @@ def create_priors(id2word):
         (u'people', 3), (u'place', 3),
     ]
 
-    # iterating through seed words and scaling eta
-    for (word, topic_num) in seed_words:
-        eta = change_priors(word, topic_num, id2word, eta, 5)
+    seed_words_jstor = [
+        ("analysis", 0),
+        ("regression", 0),
+        ("machine learning", 0),
+        ("artificial intelligence", 0),
+        ("statistics", 0),
+        ("graphs", 0),
+        ("monte carlo", 0),
+        ("deep learning", 0),
+        ("neural network", 0),
+        ("correlation", 0),
+        ("data", 0),
+        ("analytical", 0),
+        ("studies", 0),
+        ("measurement", 0),
+        ("technical", 0),
+        ("methods", 0)
+    ]
 
-    eta = change_priors('people', 3, id2word, eta, 1.5)
+    # iterating through seed words and scaling eta
+    for (word, topic_num) in seed_words_jstor:
+        eta = change_priors(word, topic_num, id2word, eta, 5)
 
     return eta
 
@@ -95,6 +114,7 @@ def gensim_topic_analysis(text_list, seeding=False):
     # formatting dictionary to use in LDA model
     id_word = corpora.Dictionary(text_list)
     texts = text_list
+
     corpus = [id_word.doc2bow(text) for text in texts]
 
     # checking if seeding parameter is passed -> default to false
@@ -107,19 +127,17 @@ def gensim_topic_analysis(text_list, seeding=False):
         per_word_topics = False
 
     # creating LDA model with parameterized topics and training passes
-    # params - dictionary, number topics to print, seed to create random
-    # number array, iterative learning through 1 doc per pass, 3 docs per
-    # pass, 5 passes, normalized prior, bool to sort topics in order
-    lda = gensim.models.ldamodel.LdaModel(corpus=corpus,
-                                          id2word=id_word,
-                                          num_topics=number_topics,
-                                          random_state=100,
-                                          update_every=1,
-                                          chunksize=3,
-                                          passes=5,
-                                          alpha='auto',
-                                          eta=eta,
-                                          per_word_topics=per_word_topics)
+    lda = gensim.models.ldamodel.LdaModel(
+        corpus=corpus,
+        id2word=id_word,
+        num_topics=number_topics,
+        update_every=0,  # batch learning
+        chunksize=500,  # chunks of 500 documents
+        passes=2,  # 2 passes through corpus
+        alpha='auto',  # learning prior from corpus
+        eta=eta,  # optional seeding parameter
+        per_word_topics=per_word_topics
+    )
 
     print(lda.print_topics())
     return lda, corpus, id_word, text_list
@@ -189,7 +207,7 @@ def split_documents(model, id_word, text_list):
 
         topic_dict[max_prob[0]].append(doc)
 
-        return topic_dict
+    return topic_dict
 
 
 def train_model(corpus_data):
@@ -226,10 +244,15 @@ def evaluate_model():
 
 if __name__ == "__main__":
 
-    x = process_web_data('source_files/webscraping_data_2.p')
+    # web data
+    # web_data = pickle.load(open('source_files/uris/webscraping_data_2.p', "rb"))
+    # x = process_web_data(web_data)
+
+    # jstor data
+    x = create_jstor_corpus()
+
+    print("JSTOR corpus extracted")
+
     gensim_model, corpus, id_word, text_list = gensim_topic_analysis(
-        x[:10], seeding=True)
+        x, seeding=True)
     show_pyldavis(gensim_model, corpus, id_word)
-
-
-    # print(create_priors(id_word))

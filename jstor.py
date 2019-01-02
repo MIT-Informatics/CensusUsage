@@ -4,6 +4,7 @@ import os
 import numpy as np
 import pickle
 import re
+import math
 
 import xml.etree.ElementTree as ET
 import glob
@@ -20,9 +21,6 @@ def ngram_to_doc(filepath):
 	@return - the document to add to the dictionary
 	'''
 
-	# raw data read from n gram file
-	n_gram_data = []
-
 	# format data to add to corpus
 	document = []
 
@@ -33,21 +31,19 @@ def ngram_to_doc(filepath):
 
 		while line:
 			tuple_data = line.split("\t")
-			# creating triple of word, count, id
-			n_gram_data.append((tuple_data[0], tuple_data[1].replace('\n', '')))
+			# reading word and frequency information
+			word = tuple_data[0]
+			count = int(tuple_data[1].replace("\n",''))			
+
+			# processing text string
+			word = clean_text(word)
+
+			# adding word to document the number of times as the unigram count
+			if not word in stop_words and len(word) > 2:
+				for i in range(count):
+					document.append(word)
+
 			line = f.readline()
-
-	# adding words to document
-	for tup in n_gram_data:
-		word = tup[0].translate(digits)
-
-		#removing punctuation and numbers
-		word = clean_text(word)
-
-		# adding word to document the number of times as the unigram count
-		if not word in stop_words and len(word) > 2:
-			for i in range(int(tup[1])):
-				document.append(tup[0])
 
 	return document
 
@@ -75,14 +71,21 @@ def create_jstor_corpus():
 	Method to run the topic model on JSTOR datasets
 	'''
 
-	all_files = glob.glob("source_files/american_community_survey_ngram/*")
+	all_files = glob.glob("source_files/jstor/american_community_survey_ngram/*")
 	text_list = create_text_list(all_files)
 
-	cleaned_text = []
-	for i in text_list:
-		cleaned_text.append(process_bow(i)[0])
+	cleaned_texts = []
 
-	return cleaned_text
+	total = len(text_list)
+	count = 0
+
+	for i in text_list:
+		cleaned_texts.append(process_bow(i)[0])
+		
+		if count % 50:
+			print("[" + str(count) + " / " + str(total) + " files read]") 
+
+	return cleaned_texts
 
 
 def read_journal_titles(directory):
@@ -183,10 +186,10 @@ def split_journal_titles(titles, words):
 
 	Keyword Args:
 	titles - a dictionary of (title -> filepath) mappings
-	words - the set of words to split on 
+	words - the set of words to split on
 
 	Return:
-	two lists, the first is all the titles that contain any word in words and the 
+	two lists, the first is all the titles that contain any word in words and the
 	second list containing all other titles
 	'''
 
@@ -197,17 +200,20 @@ def split_journal_titles(titles, words):
 		added = False
 		for word in words:
 			if word in title.lower():
-				titles_with.append((title, convert_metadata_ngram(titles[title])))
+				titles_with.append(
+					(title, convert_metadata_ngram(titles[title])))
 				added = True
 				break
 		if not added:
-			titles_without.append((title, convert_metadata_ngram(titles[title])))
+			titles_without.append(
+				(title, convert_metadata_ngram(titles[title])))
 
 	return titles_with, titles_without
 
+
 def calculate_word_frequencies(tuples_list):
 	'''
-	Method to calculate the different in word frequency of documents that are 
+	Method to calculate the different in word frequency of documents that are
 	split by containing specific keywords
 
 	Keyword Args:
@@ -237,6 +243,7 @@ def calculate_word_frequencies(tuples_list):
 
 	return doc2freq, len(tuples_list)
 
+
 def create_split_corpuses(words_with, words_without):
 	'''
 	Method to create corpuses from dictionaries of (title->filepath) dictionaries
@@ -245,12 +252,12 @@ def create_split_corpuses(words_with, words_without):
 	words_with - a dictionary of (title->filepath) that has titles that contain the words
 	words_without - a dictionary of (title->filepath) that has titles that doesn't contain the words
 
-	Returns: 
+	Returns:
 	two strings that contain all the words with and words without
 	'''
 
 	links_w = list(map(lambda x: x[1], words_with))
-	links_wout =  list(map(lambda x: x[1], words_without))
+	links_wout = list(map(lambda x: x[1], words_without))
 
 	texts_w = create_text_list(links_w)
 	texts_wout = create_text_list(links_wout)
@@ -258,7 +265,7 @@ def create_split_corpuses(words_with, words_without):
 	string_w = flatten_string_list(texts_w)
 	string_wout = flatten_string_list(texts_wout)
 
-	return string_w, string_wout, texts_w, texts_wout 
+	return string_w, string_wout, texts_w, texts_wout
 
 
 def flatten_string_list(bow):
@@ -304,12 +311,50 @@ def calculate_different_frequencies(directory, words_list):
 	for word in freq_with:
 		freq_with[word] /= num_with
 
-	for word in freq_without:	
+	for word in freq_without:
 		freq_without[word] /= num_without
 
-	print("Articles with: " + str(num_with) + " | Articles without: " + str(num_without))
+	print("Articles with: " + str(num_with) +
+		  " | Articles without: " + str(num_without))
 
 	return freq_with, freq_without
+
+
+def calculate_max_diff_freq(freq_with, freq_without):
+	'''
+	Method to sort words by difference in frequency of documents with titles
+	containing the analytical word set vs documents with titles that do not
+	contain the word set
+
+	Keyword Args:
+	freq_with - a dictionary of word to doc frequency of docs with titles
+	freq_wihtout - a dictionary of word to doc frequency of docs without titles
+
+	Returns:
+	a sorted dictionary of word -> (freq_with, freq_without) sorted by max of
+	|freq_with - freq_without|
+	'''
+
+	sorted_diff = {}
+
+	# looping through words and populating dictionary with freq_without keys
+	for word in freq_without:
+		if word in freq_with:
+			sorted_diff[word] = (freq_with[word], freq_without[word])
+		else:
+			sorted_diff[word] = (0.0, freq_without[word])
+
+	# looping through remaining words in freq_with keys
+	for word in freq_with:
+		if word in freq_with:
+			pass
+		else:
+			sorted_diff[word] = (freq_with[word], 0.0)
+
+	sorted_diff = sorted(sorted_diff.items(), key = lambda x:
+		x[1][0] - x[1][1], reverse=True)
+
+	return sorted_diff
 
 
 # an example path from the jstor database
@@ -328,34 +373,52 @@ split_words = [
 	"artificial intelligence",
 	"statistics",
 	"graphs",
-	"monte carlo"
+	"monte carlo",
+	"deep learning",
+	"neural network",
+	"correlation",
+	"data",
+	"analytical",
+	"studies",
+	"measurement",
+	"technical",
+	"methods"
 ]
 
 if __name__ == "__main__":
 
-	# creating titles dictinoary
-	a, b = calculate_different_frequencies(all_metadata, split_words)
+	# creating titles dictionary
+	# a, b = calculate_different_frequencies(all_metadata, split_words)
 
-	sorted_a = sorted(a.items(), key=lambda x: x[1], reverse=True)
-	sorted_b = sorted(b.items(), key=lambda x: x[1], reverse=True)
+	# sorted_diff = calculate_max_diff_freq(a,b)
 
-	print("Top 20 words in a")
-	for word in sorted_a[:40]:
-		word = word[0]
-		if word in b:
-			print(word, "A: " + str(a[word]) + " | B: " + str(b[word]))
-		else:
-			print(word, "A: " + str(a[word]) + " | B: 0")
+	# print(sorted_diff[0])
+	# with open("most_diff_words.txt", "w") as f:
+	# 	for item in sorted_diff[:50]:
+	# 		word = item[0]
+	# 		freq_w = item[1][0]
+	# 		freq_wout = item[1][1]
+	# 		f.write(word + " : " + str(freq_w) + " : " + str(freq_wout) + "\n")
 
-	print("Top 20 words in b")
-	for word in sorted_b[:40]:
-		word = word[0]
-		if word in b:
-			print(word, "A: " + str(a[word]) + " | B: " + str(b[word]))
-		else:
-			print(word, "A: 0" + " | B: " + str(b[word]))
+	# storing JSTOR corpus
+	corpus = create_jstor_corpus()
+	pickle.dump(corpus, open("source_files/jstor/jstor_corpus.p", "wb"))
 
+	# sorted_a = sorted(a.items(), key=lambda x: x[1], reverse=True)
+	# sorted_b = sorted(b.items(), key=lambda x: x[1], reverse=True)
 
+	# print("Top 20 words in a")
+	# for word in sorted_a[:40]:
+	#     word = word[0]
+	#     if word in b:
+	#         print(word, "A: " + str(a[word]) + " | B: " + str(b[word]))
+	#     else:
+	#         print(word, "A: " + str(a[word]) + " | B: 0")
 
-
-
+	# print("Top 20 words in b")
+	# for word in sorted_b[:40]:
+	#     word = word[0]
+	#     if word in b:
+	#         print(word, "A: " + str(a[word]) + " | B: " + str(b[word]))
+	#     else:
+	#         print(word, "A: 0" + " | B: " + str(b[word]))
