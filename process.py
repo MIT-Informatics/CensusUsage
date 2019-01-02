@@ -30,10 +30,7 @@ stop_words.add("said")
 stop_words.add("saying")
 stop_words.add("say")
 stop_words.add("jerry")
-stop_words.add("baker")
-stop_words.add("chronicle")
 stop_words.add("would")
-stop_words.add("story")
 stop_words.add("here")
 stop_words.add("I")
 
@@ -54,12 +51,27 @@ stop_words.add("href")
 stop_words.add("magazine")
 stop_words.add("font")
 
+# from JSTOR dataset
+stop_words.add("from")
+stop_words.add("also")
+stop_words.add("which")
+stop_words.add("can")
+stop_words.add("were")
+stop_words.add("has")
+stop_words.add("been")
+stop_words.add("some")
+stop_words.add("than")
+stop_words.add("however")
+stop_words.add("would")
+stop_words.add("given")
+stop_words.add("have")
+
+
 # creating stemmer to stem through tweets
 ps = PorterStemmer()
 
 # creating lemmatizer to sdafads synonyms of words to normalize
 lemmatizer = WordNetLemmatizer()
-
 
 def convert_pos(pos_tag):
     '''
@@ -77,7 +89,7 @@ def convert_pos(pos_tag):
     elif pos_tag.startswith('R'):
         return wordnet.ADV
     else:
-            # as default for lemmatizer
+        # as default for lemmatizer
         return wordnet.NOUN
 
 
@@ -89,8 +101,6 @@ def clean_text(text):
     '''
 
     # removing any non ascii characters that cannot be read
-    # text = text.encode("ascii", "ignore")
-
     text = text.replace("  ", " ")
 
     # removing other special characters
@@ -101,9 +111,6 @@ def clean_text(text):
 
     # removing numbers
     text = re.sub(r'[0-9]', '', text)
-
-    # encoding as a string
-    text = text.encode('ascii', 'ignore')
 
     return text
 
@@ -120,6 +127,22 @@ def create_bigram_model(corpus):
     return bigram
 
 
+def remove_stopwords(words):
+    '''
+    Method to remove stopwords from a text corpus
+    
+    Keyword Args:
+    words - the corpus input
+
+    Returns:
+    the corpus with all stopwords
+    '''
+
+    # applying model to words from corpus
+    removed = list(filter(lambda x: x.lower() not in stop_words, words))
+    return removed
+
+
 def process_string(text):
     '''
     Method to do preprocessing of an input text
@@ -131,8 +154,7 @@ def process_string(text):
     words = word_tokenize(clean_text(text))
     words = filter(lambda x: x != "", words)
 
-    # applying model to words from corpus
-    removed = list(filter(lambda x: x.lower() not in stop_words, words))
+    removed = remove_stopwords(words)
 
     tags = nltk.pos_tag(removed)
     return_text = ''
@@ -142,6 +164,7 @@ def process_string(text):
     for word, tag in tags:
         return_text += lemmatizer.lemmatize(word, convert_pos(tag)) + " "
         return_list.append(lemmatizer.lemmatize(word, convert_pos(tag)))
+
     return return_text, return_list
 
 
@@ -157,7 +180,7 @@ def process_bow(bow_doc):
     words = filter(lambda x: x != "", words)
 
     # applying model to words from corpus
-    removed = list(filter(lambda x: x.lower() not in stop_words, words))
+    removed = remove_stopwords(words)
 
     tags = nltk.pos_tag(removed)
     return_text = ''
