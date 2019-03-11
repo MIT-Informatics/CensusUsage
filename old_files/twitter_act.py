@@ -1,10 +1,7 @@
 #importing twitter packages
 from twitter import *
 
-'''
-Reading access keys and tokens from OAuth.txt file
-To Utilize the Search API, please enter your consumer key and access tokens
-'''
+#Reading access keys and tokens from OAuth.txt file
 
 with open('OAuth.txt') as file:
 	consumer_key = file.readline().replace('\n','')
@@ -50,9 +47,18 @@ class TwitterSearch(object):
 
 		#List containing tweet objects 
 		statuses = tweets['statuses']
-
-		#printing out all text for tweets
-		for item in statuses:
-			print(item['text'])
-
 		return statuses
+
+def main():
+
+	'''
+	Main method for the twitter_act script
+	- creating the TwitterSearch object 
+	'''
+
+	t = TwitterSearch(consumer_key, consumer_secret, access_token, access_secret)
+	return t
+
+if __name__ == '__main__':
+	t = main()
+	print(t.searchHashtag('#ACS'))

@@ -8,22 +8,10 @@ from nltk.classify.scikitlearn import SklearnClassifier
 
 from twitter_act import *
 from process import *
-import regex as re
 
 #creating sentiment analyzer object with function parameter
 SA = SentimentAnalyzer()
 v = vader.SentimentIntensityAnalyzer()
-
-
-def remove_punctuation(text):
-    
-    '''
-    Method to remove the punctuation from a unicode text input
-    @param text - the text input
-    @return - the same input with all punctuation removed
-    '''
-
-    return re.sub(ur"\p{P}+", "", text)
 
 def polarize_tweets(tweets):
 

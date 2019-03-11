@@ -10,7 +10,6 @@ from gensim.models import ldamodel, CoherenceModel
 from gensim.models.phrases import Phrases, Phraser
 from gensim.models.word2vec import Text8Corpus, Word2Vec
 from gensim.corpora import dictionary
-import pyLDAvis.gensim
 
 # importing data storage/extraction files
 from tweets import *
@@ -21,7 +20,7 @@ from jstor import *
 sys.setrecursionlimit(40000)
 
 # number of topics to print eventually
-number_topics = 5
+number_topics = 9
 
 
 def change_priors(word, topic_number, id2word, eta, weight):
@@ -118,7 +117,8 @@ def gensim_topic_analysis(text_list, seeding=False):
     corpus = [id_word.doc2bow(text) for text in texts]
 
     # checking if seeding parameter is passed -> default to false
-    if seeding:
+    if not seeding:
+        print("Using unseeded model")
         eta = None
         per_word_topics = True
     else:
@@ -131,15 +131,17 @@ def gensim_topic_analysis(text_list, seeding=False):
         corpus=corpus,
         id2word=id_word,
         num_topics=number_topics,
-        update_every=0,  # batch learning
-        chunksize=500,  # chunks of 500 documents
-        passes=2,  # 2 passes through corpus
+        passes=5,  # 2 passes through corpus
         alpha='auto',  # learning prior from corpus
         eta=eta,  # optional seeding parameter
-        per_word_topics=per_word_topics
+        per_word_topics=per_word_topics,
     )
 
-    print(lda.print_topics())
+    topics = lda.print_topics()
+    for i in range(len(topics)):
+        print("Topic #" + str(i))
+        print(topics[i])
+
     return lda, corpus, id_word, text_list
 
 
@@ -169,6 +171,8 @@ def show_pyldavis(model, corpus, dictionary):
     @param corpus - the total corpus the model was trained on
     @param dictionary - the dictionary created in the model
     '''
+
+    import pyLDAvis.gensim
 
     prepared_data = pyLDAvis.gensim.prepare(model, corpus, dictionary)
     pyLDAvis.show(prepared_data)
@@ -216,6 +220,8 @@ def train_model(corpus_data):
     @param text_list - an input list of list of words in bow format
     '''
 
+    corpus_data = list(filter(lambda x: x != [], corpus_data))
+
     # fitting gensim model
     gensim_model, corpus, id_word, text_list = gensim_topic_analysis(
         corpus_data, seeding=True)
@@ -223,9 +229,8 @@ def train_model(corpus_data):
     print("finished training model")
 
     # storing model
-    # pickle.dump((gensim_model, corpus, id_word, text_list),
-    # open("source_files/model_result_2.p", "wb"))
-
+    pickle.dump((gensim_model, corpus, id_word, text_list),
+    open("source_files/model_result_2.p", "wb"))
 
 def evaluate_model():
     '''
@@ -239,20 +244,32 @@ def evaluate_model():
     evaluate_gensim_lda(gensim_model, corpus, id_word, text_list)
 
     # create visualization of pyldavis
-    show_pyldavis(gensim_model, corpus, id_word)
+    # show_pyldavis(gensim_model, corpus, id_word)
 
 
 if __name__ == "__main__":
 
     # web data
-    # web_data = pickle.load(open('source_files/uris/webscraping_data_2.p', "rb"))
-    # x = process_web_data(web_data)
+    web_data = pickle.load(open('source_files/uris/news_urls_2/webscraping_data_2.p', "rb"))
+    x = process_web_data(web_data)
 
     # jstor data
-    x = create_jstor_corpus()
+ #    x = load_jstor_corpus()
+
+	# # removing other language documents skewing our results
+ #    conditional = lambda x: not ("del" in x or "der" in x or "sich" in x or "qui" in x)
+ #    x = list(filter(conditional, x))
+
 
     print("JSTOR corpus extracted")
 
-    gensim_model, corpus, id_word, text_list = gensim_topic_analysis(
-        x, seeding=True)
-    show_pyldavis(gensim_model, corpus, id_word)
+    model, corpus, id_word, text_list = gensim_topic_analysis(
+        x, seeding=False)
+
+    # evaluate_gensim_lda(model, corpus, id_word, text_list)
+    # show_pyldavis(model, corpus, id_word)
+
+
+
+# Words showing up in topics
+# del, der, sich, une, est, qui

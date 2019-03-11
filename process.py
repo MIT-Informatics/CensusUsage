@@ -112,7 +112,7 @@ def clean_text(text):
     # removing numbers
     text = re.sub(r'[0-9]', '', text)
 
-    return text
+    return text.lower()
 
 
 def create_bigram_model(corpus):
@@ -177,6 +177,7 @@ def process_bow(bow_doc):
 
     # processing the bow documents
     words = [clean_text(i) for i in bow_doc]
+
     words = filter(lambda x: x != "", words)
 
     # applying model to words from corpus
