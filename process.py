@@ -130,7 +130,7 @@ def create_bigram_model(corpus):
 def remove_stopwords(words):
     '''
     Method to remove stopwords from a text corpus
-    
+
     Keyword Args:
     words - the corpus input
 
@@ -167,6 +167,31 @@ def process_string(text):
 
     return return_text, return_list
 
+def process_tweet(text):
+    '''
+    Method to do preprocessing of an input text (from twitter data)
+    @param text - raw text to process
+    @return - the processed version of the text
+    '''
+
+    # tokenizing string into words and POS tagging and removing all punctuation
+    words = text.split()
+    words = list(filter(lambda x: x[0] != "#", words))
+    words = [clean_text(word) for word in words]
+    words = filter(lambda x: x != "", words)
+
+    removed = remove_stopwords(words)
+
+    tags = nltk.pos_tag(removed)
+    return_text = ''
+    return_list = []
+
+    # removing stop words in strings and lemmatizing
+    for word, tag in tags:
+        return_text += lemmatizer.lemmatize(word, convert_pos(tag)) + " "
+        return_list.append(lemmatizer.lemmatize(word, convert_pos(tag)))
+
+    return return_text, return_list
 
 def process_bow(bow_doc):
     '''

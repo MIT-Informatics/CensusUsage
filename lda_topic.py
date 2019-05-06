@@ -252,22 +252,34 @@ def train_model(corpus_data):
 
 if __name__ == "__main__":
 
+	########################################################################
 	# jstor data
-	x = load_jstor_corpus()
+	# x = load_jstor_corpus()
 
-	# removing other language documents skewing our results
-	conditional = lambda x: not ("del" in x or "der" in x or "sich" in x or "qui" in x or "usepackage" in x)
-	x = list(filter(conditional, x))
+	# # removing other language documents skewing our results
+	# conditional = lambda x: not ("del" in x or "der" in x or "sich" in x or "qui" in x or "usepackage" in x)
+	# x = list(filter(conditional, x))
+	# print("JSTOR corpus extracted")
 
+
+	########################################################################
 	# web data
 	# web_data = pickle.load(
-		# open('source_files/uris/news_urls_2/webscraping_data_2.p', "rb"))
+	# 	open('source_files/uris/news_urls_2/webscraping_data_2.p', "rb"))
 	# x = process_web_data(web_data)
+	# print("web corpus extracted")
 
-	print("JSTOR corpus extracted")
 
-	model = LDAModel(x, 10)
-	model.gensim_topic_analysis(seeding=False)
+	########################################################################
+	# Twitter data
+	# flat_list = [item for sublist in l for item in sublist]
+
+	x = [x for y in load_twitter_corpus() for x in y]
+	x = [y.split() for y in x]
+	# print("twitter corpus extracted")
+
+	model = LDAModel(x, 5)
+	model.gensim_topic_analysis(seeding=True)
 	model.evaluate_gensim_lda()
 	# show_pyldavis(model, corpus, id_word)
 
