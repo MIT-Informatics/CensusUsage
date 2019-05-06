@@ -10,6 +10,10 @@ After extracting these corpuses, the text is processed using the process.py file
 
 I have two different implementations of the LDA topic model, which is an unsupervised learning algorithm to cluster the documents into different topics based on word probability distributions. I first implemented the model using the gensim package, which creates a model object and takes in a text corpus. It takes in a corpus in a bag-of-words format. This implementation has the most functionality and has been run on all of the three different data sets. The Sci-kit Learn implementation is contained within sklearn.py and it takes in a corpus in document form, which is a list of strings. It creates a count vectorizer and puts it through the lda model. This implementation has only been run on the twitter data.
 
+Next Steps:
+1. Working towards other unsupervised learning implementations.
+2. Using hand labelled data to create a classifier for Census Data Usage by purpose.
+3. Use academic journal abstracts in both unsupervised/supervised pipeline.
 
 -------------------------------
 
