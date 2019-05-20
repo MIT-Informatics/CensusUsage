@@ -79,7 +79,7 @@ class kmeans_model():
 
 		for i in range(self.k):
 		    print("Cluster %d:" % i),
-		    for ind in order_centroids[i, :num]:
+		    for ind in order_centroids[i, :]:
 		        print(' %s' % terms[ind])
 
 def main():
