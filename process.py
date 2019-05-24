@@ -167,6 +167,56 @@ def process_string(text):
 
     return return_text, return_list
 
+def is_bad_tweet_word(word):
+    '''
+    Method to check if a word is a weird tweet word
+    
+    Args:
+    word - a string of a tweet word
+
+    Returns:
+    - a boolean representing if a word should be filtered
+    '''
+
+    toReturn = False
+    other = False
+    
+    #checking for hashtag
+    if word[0] == "#":
+        toReturn = True
+    if word.startswith("pictwittercom"):
+        toReturn = True
+    if word.startswith("lnkdin"):
+        toReturn = True
+    if word.startswith("pictwittercom"):
+        other = True
+        toReturn = True
+    if word.startswith("nextcityorgdailyentry"):
+        toReturn = True  
+    if word.startswith("nsus"):
+        toReturn = True
+    if word.startswith("nytimes"):
+        toReturn = True
+    if word.startswith("nytims"):
+        toReturn = True
+    if word.startswith("mtbnnit"):
+        toReturn = True
+    if word.startswith("pictwittercom"):
+        toReturn = True
+    if word.startswith("owly"):
+        toReturn = True
+    if word.startswith("onnycgov"):
+        toReturn = True
+    if word.startswith("onforbes"):
+        toReturn = True
+    
+    if "." in word or "/" in word:
+        toReturn = True
+        print(word)
+
+    return toReturn
+        
+
 def process_tweet(text):
     '''
     Method to do preprocessing of an input text (from twitter data)
@@ -176,7 +226,8 @@ def process_tweet(text):
 
     # tokenizing string into words and POS tagging and removing all punctuation
     words = text.split()
-    words = list(filter(lambda x: x[0] != "#", words))
+    words = [w.strip() for w in words]
+    words = list(filter(lambda x: not is_bad_tweet_word(x), words))
     words = [clean_text(word) for word in words]
     words = filter(lambda x: x != "", words)
 
