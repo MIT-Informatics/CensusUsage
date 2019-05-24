@@ -42,6 +42,8 @@ def filter_tweets(tweet_list):
     """
 
     filtered_data = {}
+    # list of ids already stored
+    ids = []
 
     count = 0
     for tweet in tweet_list:
@@ -61,8 +63,13 @@ def filter_tweets(tweet_list):
                 "geo": tweet.geo
             }
 
-            filtered_data[count] = data
-            count += 1
+            # checking for duplicates
+            if tweet.id not in ids:
+                filtered_data[count] = data
+                count += 1
+                ids.append(tweet.id)
+            else: 
+                pass
 
     return filtered_data
 
@@ -122,7 +129,7 @@ def create_tweet_corpuses():
         " ACS survey"
     ]
 
-    # # extracting tweet information
+    # extracting tweet information
     # tweets1 = extract_tweet_data(search_terms[0], 10000)
     # corpuses.append(filter_tweets(tweets1))
 
@@ -164,7 +171,7 @@ def create_tweet_corpuses():
     # print("Extracted 6th term after " +
     #       str((time.time() - start_time)) + " seconds")
 
-    # store_data(text_list, "tweets.p")
+    # store_data(corpuses, "tweets.p")
     return corpuses
 
 
@@ -173,7 +180,7 @@ def create_clean_corpuses():
     # querying api for corpuses for all search terms
     corpus1, corpus2, corpus3, corpus4, corpus5, corpus6 = create_tweet_corpuses()
 
-    # storing text of the data
+    # # storing text of the data
     # store_data(corpus1, "american_community_survey.json")
     # store_data(corpus2, "#acssurvey.json")
     # store_data(corpus3, "Americancommunitysurvey.json")
@@ -198,8 +205,12 @@ def load_twitter_corpus():
 	Method to load twitter corpuses
 	'''
 
-	return pickle.load(open("source_files/twitter/twitter_corpus.p", "rb"))
+	return pickle.load(open("source_files/twitter/filtered_twitter_corpus.p", "rb"))
 
+
+def main():
+    x = create_clean_corpuses()
+    pickle.dump(x, open("source_files/twitter/filtered_twitter_corpus.p", "wb"))
 
 # when running script
 if __name__ == '__main__':
