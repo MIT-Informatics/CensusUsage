@@ -16,6 +16,8 @@ from tweets import *
 from webscraping import *
 from jstor import *
 
+import operator
+
 # to help with pickling html files from BeautifulSoup
 sys.setrecursionlimit(40000)
 
@@ -247,8 +249,49 @@ def train_model(corpus_data):
 	print("finished training model")
 
 	# storing model
-	pickle.dump((gensim_model, corpus, id_word, text_list),
+	pickle.dump((model, corpus, id_word, text_list),
 				open("source_files/model_result_2.p", "wb"))
+
+def analyze_topics(model):
+	'''
+	Method to analyze the different topics produced by the lda model
+
+	Keyword Args:
+	model - the lda model object
+	'''
+
+	topics = model.model.get_topics()
+	topic_words = []
+	for t in topics:
+		words_for_topic = {}
+
+		# taxing max from comparing to other topics
+		for ot in topics:
+			if not np.array_equal(ot, t):
+				diff = t - ot
+
+				# updting what max for topic is
+				for i in range(len(diff)):
+					if diff[i] in words_for_topic:
+						if diff[i] < words_for_topic[i]:
+							words_for_topic[i] = diff[i]
+						else:
+							pass
+					else:
+						words_for_topic[i] = diff[i]
+		topic_words.append(words_for_topic)
+
+
+
+	for t in topic_words:
+		print("Topic:")
+		sorts = sorted(t.items(), key=lambda x: x[1] * -1)
+		# print(sorts)
+		for i in range(20):
+			print((model.id2word[sorts[i][0]], sorts[i][1]))
+
+		print("\n")
+	return topic_words
 
 if __name__ == "__main__":
 
@@ -280,6 +323,9 @@ if __name__ == "__main__":
 
 	model = LDAModel(x, 5)
 	model.gensim_topic_analysis(seeding=True)
-	model.evaluate_gensim_lda()
+	# model.evaluate_gensim_lda()
+	analyze_topics(model)
+
+	pickle.dump(model, open("source_files/twitter/model_result.p", "wb"))
 	# show_pyldavis(model, corpus, id_word)
 
